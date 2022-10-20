@@ -204,6 +204,4 @@ class PlayAltitude:
 
         for i in range(self.num_fig):
             self.figs[i].savefig(result_dir + names[i])
-
-        for i in range(self.num_fig):
             plt.close(self.figs[i])

@@ -174,7 +174,6 @@ class PlayAttitude:
         self.print_plot(file_name=str(self.env.envs[0].last_p))
 
     def print_plot(self, file_name: str):
-
         for i in range(self.num_fig):
             self.axes[i].legend(range(1, self.times + 1))
 
@@ -204,6 +203,4 @@ class PlayAttitude:
 
         for i in range(self.num_fig):
             self.figs[i].savefig(result_dir + names[i])
-
-        for i in range(self.num_fig):
             plt.close(self.figs[i])
