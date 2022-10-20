@@ -3,6 +3,10 @@ from pandas import DataFrame
 
 from app.controller.learn_attitude import learn_attitude
 from app.controller.learn_altitude import learn_altitude
+from app.controller.learn_path import learn_path
+from app.controller.play_altitude import play_altitude
+from app.controller.play_attitude import play_attitude
+from app.controller.play_path import play_path
 
 
 class Controller:
@@ -34,11 +38,12 @@ class Controller:
             elif "path_planning" in app["environment name"]:
                 learn_path(app["environment name"], app["iter number"])
 
-        apps = self.df_run[self.df_learn["run"] > 0]
+        apps = self.df_run[self.df_run["run"] > 0]
         for index, app in apps.iterrows():
+
             if "attitude" in app["environment name"]:
-                learn_attitude(app["environment name"], app["iter number"])
+                play_attitude(app["environment name"])
             elif "altitude" in app["environment name"]:
-                learn_altitude(app["environment name"], app["iter number"])
+                play_altitude(app["environment name"])
             elif "path_planning" in app["environment name"]:
-                learn_path(app["environment name"], app["iter number"])
+                play_path(app["environment name"])
