@@ -6,10 +6,13 @@ from scripts.airsim_env import close_airsim_env
 
 
 class LearnPathEnv(gym.Env):
-    target_pos_idx: int
+    continue_flag: bool
+    random_start: bool
+    target_pos_idx: int = 0
     agent_start_pos: int
 
-    def __init__(self, ip_address, image_shape, env_config, random_start):
+    def __init__(self, ip_address: str, image_shape: tuple[3, 1], env_config: dict, continue_flag: bool,
+                 random_start: bool):
         self.image_shape = image_shape
         self.sections = env_config["sections"]
 
@@ -22,6 +25,7 @@ class LearnPathEnv(gym.Env):
 
         self.collision_time = 0
         self.random_start = random_start
+        self.continue_flag = continue_flag
 
     def step(self, action):
         self.do_action(action)
@@ -48,11 +52,10 @@ class LearnPathEnv(gym.Env):
         # Get collision time stamp
         self.collision_time = self.drone.simGetCollisionInfo().time_stamp
 
-        # Get a random section
-        if self.random_start:
+        if self.random_start and not self.continue_flag:
             self.target_pos_idx = np.random.randint(len(self.sections))
         else:
-            self.target_pos_idx = 0
+            self.target_pos_idx = 1
 
         section = self.sections[self.target_pos_idx]
 
@@ -114,6 +117,12 @@ class LearnPathEnv(gym.Env):
         # Get meters agent traveled
         agent_traveled_x = np.abs(self.agent_start_pos - x)
 
+        if agent_traveled_x > 4 and self.continue_flag:
+            self.target_pos_idx += 1
+            section = self.sections[self.target_pos_idx]
+            self.target_pos = section["target"]
+            self.agent_start_pos = x
+
         # Alignment reward
         if target_dist_curr < 0.30:
             reward += 12
@@ -130,7 +139,7 @@ class LearnPathEnv(gym.Env):
             done = 1
 
         # Check if agent passed through the hole
-        elif agent_traveled_x > 3.7:
+        elif agent_traveled_x > 3.7 and not self.continue_flag:
             reward += 10
             done = 1
 
@@ -139,9 +148,10 @@ class LearnPathEnv(gym.Env):
         # (3.7-agent_traveled_x) : distance between agent and wall
         # (3.7-agent_traveled_x)*sin(60) : end points that camera can capture
         # FOV : 120 deg, sin(60) ~ 1.732
-        elif (target_dist_curr - 0.3) > (3.7 - agent_traveled_x) * 1.732:
+        elif (target_dist_curr - 0.3) > (3.7 - agent_traveled_x) * 1.732 and not self.continue_flag:
             reward = -100
             done = 1
+
         return reward, done
 
     def is_collision(self):
