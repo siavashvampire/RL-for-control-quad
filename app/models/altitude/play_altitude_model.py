@@ -15,6 +15,7 @@ from app.iteration_handler.iteration_handler import IterationHandler
 
 
 class PlayAltitude:
+    num_fig: int
     model: PPO
     times: int
     axes: list[Axes]
@@ -41,6 +42,7 @@ class PlayAltitude:
 
         self.models_dir = f"models/{name}/"
 
+        self.num_fig = 9
         self.figs = []
         self.axes = []
         self.init_fig()
@@ -48,45 +50,44 @@ class PlayAltitude:
         np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
     def init_fig(self) -> None:
-        for i in range(9):
+        for i in range(self.num_fig):
             self.figs.append(plt.figure())
             self.axes.append(self.figs[i].add_axes((0.1, 0.1, 0.8, 0.8)))
 
-        self.axes[0].set_title('theta vs time')
-        self.axes[0].set_xlabel('time')
-        self.axes[0].set_ylabel('theta')
+        titles = ['theta vs time',
+                  'phi vs time',
+                  'gamma vs time',
+                  'theta dot vs time',
+                  'phi dot vs time',
+                  'gamma dot vs time',
+                  'reward vs time',
+                  'trust vs time',
+                  'P vs time']
 
-        self.axes[1].set_title('phi vs time')
-        self.axes[1].set_xlabel('time')
-        self.axes[1].set_ylabel('phi')
+        xlabel = ['time',
+                  'time',
+                  'time',
+                  'time',
+                  'time',
+                  'time',
+                  'time',
+                  'time',
+                  'time']
 
-        self.axes[2].set_title('gamma vs time')
-        self.axes[2].set_xlabel('time')
-        self.axes[2].set_ylabel('gamma')
+        ylabel = ['theta',
+                  'phi',
+                  'gamma',
+                  'theta dot',
+                  'phi dot',
+                  'gamma dot',
+                  'reward',
+                  'trust',
+                  'P']
 
-        self.axes[3].set_title('theta dot vs time')
-        self.axes[3].set_xlabel('time')
-        self.axes[3].set_ylabel('theta dot')
-
-        self.axes[4].set_title('phi dot vs time')
-        self.axes[4].set_xlabel('time')
-        self.axes[4].set_ylabel('phi dot')
-
-        self.axes[5].set_title('gamma dot vs time')
-        self.axes[5].set_xlabel('time')
-        self.axes[5].set_ylabel('gamma dot')
-
-        self.axes[6].set_title('reward vs time')
-        self.axes[6].set_xlabel('time')
-        self.axes[6].set_ylabel('reward')
-
-        self.axes[7].set_title('trust vs time')
-        self.axes[7].set_xlabel('time')
-        self.axes[7].set_ylabel('trust')
-
-        self.axes[8].set_title('P vs time')
-        self.axes[8].set_xlabel('time')
-        self.axes[8].set_ylabel('P')
+        for i in range(self.num_fig):
+            self.axes[i].set_title(titles[i])
+            self.axes[i].set_xlabel(xlabel[i])
+            self.axes[i].set_ylabel(ylabel[i])
 
     def play(self) -> None:
         if not os.path.exists(self.models_dir):
@@ -153,9 +154,9 @@ class PlayAltitude:
                 else:
                     reward_temp.append(rewards)
 
-            self.axes[0].plot(time_temp, np.array(theta_temp)*180/math.pi, linewidth=1)
-            self.axes[1].plot(time_temp, np.array(phi_temp)*180/math.pi, linewidth=1)
-            self.axes[2].plot(time_temp, np.array(gamma_temp)*180/math.pi, linewidth=1)
+            self.axes[0].plot(time_temp, np.array(theta_temp) * 180 / math.pi, linewidth=1)
+            self.axes[1].plot(time_temp, np.array(phi_temp) * 180 / math.pi, linewidth=1)
+            self.axes[2].plot(time_temp, np.array(gamma_temp) * 180 / math.pi, linewidth=1)
             self.axes[3].plot(time_temp, theta_dot_temp, linewidth=1)
             self.axes[4].plot(time_temp, phi_dot_temp, linewidth=1)
             self.axes[5].plot(time_temp, gamma_dot_temp, linewidth=1)
@@ -173,15 +174,9 @@ class PlayAltitude:
         self.print_plot(file_name=str(self.env.envs[0].last_p))
 
     def print_plot(self, file_name: str):
-        self.axes[0].legend(range(1, self.times + 1))
-        self.axes[1].legend(range(1, self.times + 1))
-        self.axes[2].legend(range(1, self.times + 1))
-        self.axes[3].legend(range(1, self.times + 1))
-        self.axes[4].legend(range(1, self.times + 1))
-        self.axes[5].legend(range(1, self.times + 1))
-        self.axes[6].legend(range(1, self.times + 1))
-        self.axes[7].legend(range(1, self.times + 1))
-        self.axes[8].legend(range(1, self.times + 1))
+
+        for i in range(self.num_fig):
+            self.axes[i].legend(range(1, self.times + 1))
 
         # self.axes[0].set_ybound(-0.8, 0.8)
         # self.axes[1].set_ybound(-0.8, 0.8)
@@ -197,15 +192,18 @@ class PlayAltitude:
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
 
-        self.figs[0].savefig(result_dir + '1.theta vs time.png')
-        self.figs[1].savefig(result_dir + '2.phi vs time.png')
-        self.figs[2].savefig(result_dir + '3.gamma vs time.png')
-        self.figs[3].savefig(result_dir + '4.theta dot vs time.png')
-        self.figs[4].savefig(result_dir + '5.phi dot vs time.png')
-        self.figs[5].savefig(result_dir + '6.gamma dot vs time.png')
-        self.figs[6].savefig(result_dir + '7.reward vs time.png')
-        self.figs[7].savefig(result_dir + '8.trust vs time.png')
-        self.figs[8].savefig(result_dir + '9.P vs time.png')
+        names = ['1.theta vs time.png',
+                 '2.phi vs time.png',
+                 '3.gamma vs time.png',
+                 '4.theta dot vs time.png',
+                 '5.phi dot vs time.png',
+                 '6.gamma dot vs time.png',
+                 '7.reward vs time.png',
+                 '8.trust vs time.png',
+                 '9.P vs time.png']
 
-        for i in range(9):
+        for i in range(self.num_fig):
+            self.figs[i].savefig(result_dir + names[i])
+
+        for i in range(self.num_fig):
             plt.close(self.figs[i])
