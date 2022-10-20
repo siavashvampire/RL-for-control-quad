@@ -1,40 +1,17 @@
 from scripts import airsim
 import gym
 import numpy as np
-from app.models.controller.controller import ControllerPID
-from app.models.quadcopter_dynamics.quadcopter import Quadcopter
-
-TIME_SCALING = 1.0  # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
-QUAD_DYNAMICS_UPDATE = 0.002  # seconds
-CONTROLLER_DYNAMICS_UPDATE = 0.005  # seconds
-
-QUAD_PARAMETERS = {'Motor_limits': [2000, 5000],'position': [1, 1, 1], 'orientation': [0, 0, 0], 'L': 0.3, 'r': 0.1, 'prop_size': [10, 4.5],
-                   'weight': 1.2}
-
-CONTROLLER_PARAMETERS = {'Motor_limits': [2000, 5000],
-                         'Tilt_limits': [-10, 10],
-                         'Yaw_Control_Limits': [-900, 900],
-                         'Z_XY_offset': 500,
-                         'Linear_PID': {'P': [300, 300, 7000], 'I': [0.04, 0.04, 4.5], 'D': [450, 450, 5000]},
-                         'Linear_To_Angular_Scaler': [1, 1, 0],
-                         'Yaw_Rate_Scaler': 0.18,
-                         'Angular_PID': {'P': [22000, 22000, 1500], 'I': [0, 0, 1.2], 'D': [12000, 12000, 0]},
-                         }
 
 
 class LearnPathEnv(gym.Env):
+    target_pos_idx: int
+    agent_start_pos: int
+
     def __init__(self, ip_address, image_shape, env_config):
         self.image_shape = image_shape
         self.sections = env_config["sections"]
 
         self.drone = airsim.MultirotorClient(ip=ip_address)
-
-        self.quad = Quadcopter(QUAD_PARAMETERS)
-
-        self.ctrl = ControllerPID(get_state=self.quad.get_state,
-                                  get_time=self.quad.get_time,
-                                  actuate_motors=self.quad.set_motor_speeds,
-                                  params=CONTROLLER_PARAMETERS)
 
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=self.image_shape, dtype=np.uint8)
         self.action_space = gym.spaces.Discrete(9)
@@ -70,7 +47,7 @@ class LearnPathEnv(gym.Env):
         self.collision_time = self.drone.simGetCollisionInfo().time_stamp
 
         # Get a random section
-        if self.random_start == True:
+        if self.random_start:
             self.target_pos_idx = np.random.randint(len(self.sections))
         else:
             self.target_pos_idx = 0
@@ -85,9 +62,6 @@ class LearnPathEnv(gym.Env):
 
         pose = airsim.Pose(airsim.Vector3r(self.agent_start_pos, y_pos, z_pos))
         self.drone.simSetVehiclePose(pose=pose, ignore_collision=True)
-        self.quad.set_position([self.agent_start_pos, y_pos, z_pos + 2.5])
-        self.ctrl.update_target((self.agent_start_pos, y_pos, z_pos + 2.5))
-        self.ctrl.update_yaw_target(0)
 
         # Get target distance for reward calculation
         self.target_dist_prev = np.linalg.norm(np.array([y_pos, z_pos]) - self.target_pos)
@@ -166,7 +140,6 @@ class LearnPathEnv(gym.Env):
         elif (target_dist_curr - 0.3) > (3.7 - agent_traveled_x) * 1.732:
             reward = -100
             done = 1
-        print(reward)
         return reward, done
 
     def is_collision(self):
