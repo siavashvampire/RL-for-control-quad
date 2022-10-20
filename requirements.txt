@@ -53,3 +53,5 @@ tqdm==4.64.1
 wandb==0.13.4
 openpyxl==3.0.10
 xlsxwriter == 3.0.3
+
+jdatetime == 4.1.0
