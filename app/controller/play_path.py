@@ -6,12 +6,12 @@ def play_path(app_name: str):
         env_name = "scripts:learn_path_env-v0"
         file_name = "best_model.zip"
         times = 2
-        random_start = True
+        random_start = False
     else:
         env_name = ""
         file_name = ""
         times = 5
-        random_start = True
+        random_start = False
 
     learning_path = PlayPathPlanning(name=app_name, file_name=file_name, env_name=env_name,
                                      times=times, random_start=random_start)

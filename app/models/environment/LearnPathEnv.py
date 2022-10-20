@@ -2,12 +2,14 @@ from scripts import airsim
 import gym
 import numpy as np
 
+from scripts.airsim_env import close_airsim_env
+
 
 class LearnPathEnv(gym.Env):
     target_pos_idx: int
     agent_start_pos: int
 
-    def __init__(self, ip_address, image_shape, env_config):
+    def __init__(self, ip_address, image_shape, env_config, random_start):
         self.image_shape = image_shape
         self.sections = env_config["sections"]
 
@@ -19,7 +21,7 @@ class LearnPathEnv(gym.Env):
         self.info = {"collision": False}
 
         self.collision_time = 0
-        self.random_start = True
+        self.random_start = random_start
 
     def step(self, action):
         self.do_action(action)
@@ -165,3 +167,6 @@ class LearnPathEnv(gym.Env):
         depth_image = np.reshape(depth_image, (responses[0].height, responses[0].width))
         depth_image[depth_image > thresh] = thresh
         return depth_image
+
+    def stop(self):
+        close_airsim_env()
