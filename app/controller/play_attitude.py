@@ -1,5 +1,3 @@
-import sys
-
 from app.models.attitude.play_attitude_model import PlayAttitude
 
 
