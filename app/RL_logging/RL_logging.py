@@ -16,3 +16,7 @@ def open_log_web() -> WebDriver:
     except:
         pass
     return driver
+
+
+def close_tensorboard():
+    subprocess.call("TASKKILL /F /IM tensorboard.exe", shell=True)

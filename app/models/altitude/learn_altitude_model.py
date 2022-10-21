@@ -12,7 +12,7 @@ from stable_baselines3.common.callbacks import EvalCallback
 from wandb.sdk.lib import RunDisabled
 from wandb.sdk.wandb_run import Run
 
-from app.RL_logging.RL_logging import open_log_web
+from app.RL_logging.RL_logging import open_log_web, close_tensorboard
 from app.iteration_handler.iteration_handler import IterationHandler
 
 
@@ -117,4 +117,5 @@ class LearningAltitude:
 
         self.env.envs[0].stop()
         self.driver.close()
+        close_tensorboard()
         # self.run.finish()

@@ -14,7 +14,7 @@ from wandb.sdk.lib import RunDisabled
 from wandb.sdk.wandb_run import Run
 from scripts.airsim_env import open_airsim_train_env
 
-from app.RL_logging.RL_logging import open_log_web
+from app.RL_logging.RL_logging import open_log_web, close_tensorboard
 from app.iteration_handler.iteration_handler import IterationHandler
 
 
@@ -105,3 +105,5 @@ class LearningPathPlanning:
 
         self.env.envs[0].stop()
         self.driver.close()
+
+        close_tensorboard()
