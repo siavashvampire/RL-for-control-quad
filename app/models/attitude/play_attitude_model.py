@@ -1,5 +1,6 @@
 import math
 import os
+from typing import Union
 
 import gym
 import jdatetime
@@ -7,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO,A2C
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 from tqdm import tqdm
@@ -17,7 +18,7 @@ from app.iteration_handler.iteration_handler import IterationHandler
 
 class PlayAttitude:
     num_fig: int
-    model: PPO
+    model: Union[PPO,A2C]
     times: int
     axes: list[Axes]
     figs: list[Figure]
@@ -41,7 +42,7 @@ class PlayAttitude:
 
         self.times = times
 
-        self.models_dir = f"models/{name}/"
+        self.models_dir = f"models/{self.name}/"
 
         self.num_fig = 9
         self.figs = []
@@ -104,7 +105,12 @@ class PlayAttitude:
             )
         )])
 
-        self.model = PPO.load(env=self.env, path=self.models_dir + self.file_name)
+        if "A2C" in self.name:
+            self.model = A2C.load(env=self.env, path=self.models_dir + self.file_name)
+        else:
+            self.model = PPO.load(env=self.env, path=self.models_dir + self.file_name)
+
+
 
         for i in tqdm(range(self.times), colour='green'):
             obs = self.env.reset()

@@ -5,7 +5,7 @@ import gym
 import numpy as np
 from selenium.webdriver.chrome.webdriver import WebDriver
 
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO,A2C
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.callbacks import EvalCallback
@@ -26,7 +26,7 @@ class LearningAltitude:
     name: str
     env_name: str
     policy: str
-    model: PPO
+    model: Union[PPO,A2C]
     max_integrate_time: int
     random_start: bool
 
@@ -81,10 +81,16 @@ class LearningAltitude:
         iters = self.iteration_handler.read_iter()
 
         if iters == 0:
-            self.model = PPO(self.policy, self.env, verbose=1, device="cuda", tensorboard_log=self.logdir)
+            if "A2C" in self.name:
+                self.model = A2C(self.policy, self.env, verbose=1, device="cuda", tensorboard_log=self.logdir)
+            else:
+                self.model = PPO(self.policy, self.env, verbose=1, device="cuda", tensorboard_log=self.logdir)
         else:
             model_path = f"{self.models_dir}/{iters * time_steps}.zip"
-            self.model = PPO.load(model_path, env=self.env)
+            if "A2C" in self.name:
+                self.model = A2C.load(model_path, env=self.env)
+            else:
+                self.model = PPO.load(model_path, env=self.env)
 
         callbacks = []
         eval_callback = EvalCallback(
@@ -107,10 +113,15 @@ class LearningAltitude:
         # callbacks.append(callback)
         kwargs = {"callback": callbacks}
 
+        if "A2C" in self.name:
+            tb_log_name = f"A2C"
+        else:
+            tb_log_name = f"PPO"
+
         print(f"run learning with name {self.name}")
         while self.iteration_handler.read_flag():
             iters += 1
-            self.model.learn(total_timesteps=time_steps, reset_num_timesteps=False, tb_log_name=f"PPO", **kwargs)
+            self.model.learn(total_timesteps=time_steps, reset_num_timesteps=False, tb_log_name=tb_log_name, **kwargs)
             self.model.save(f"{self.models_dir}/{time_steps * iters}")
             self.iteration_handler.write_iter(iters)
             self.iteration_handler.write_count(self.env.envs[0].count)

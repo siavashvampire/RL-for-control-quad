@@ -129,11 +129,11 @@ class ControllerPID:
 
     def get_diff_linear(self):
         [dest_x, dest_y, dest_z] = self.target
-        [x, y, z, _, _, _, _, _, _, _, _, _] = self.get_state()
+        [x, y, z, x_dot, y_dot, z_dot, _, _, _, _, _, _] = self.get_state()
         x_error = dest_x - x
         y_error = dest_y - y
         z_error = dest_z - z
-        return np.linalg.norm([x_error, y_error, z_error])
+        return np.linalg.norm([x_error, y_error, z_error]), np.linalg.norm([x_dot, y_dot, z_dot])
 
     def get_diff_angular(self):
         [dest_x, dest_y, _] = self.target
@@ -156,37 +156,21 @@ class ControllerPID:
         phi_error = dest_phi - phi
         return np.linalg.norm([theta_error, phi_error, gamma_error]), np.linalg.norm([theta_dot, phi_dot, gamma_dot])
 
-    def get_diff_angular_theta(self):
-        [dest_x, dest_y, _] = self.target
-        [x, y, _, x_dot, y_dot, _, theta, _, gamma, theta_dot, _, _] = self.get_state()
-
-        x_error = dest_x - x
-        y_error = dest_y - y
-
-        dest_x_dot = self.LINEAR_P[0] * x_error + self.LINEAR_D[0] * (-x_dot) + self.xi_term
-        dest_y_dot = self.LINEAR_P[1] * y_error + self.LINEAR_D[1] * (-y_dot) + self.yi_term
-
-        dest_theta = self.LINEAR_TO_ANGULAR_SCALER[0] * (dest_x_dot * math.sin(gamma) - dest_y_dot * math.cos(gamma))
-        dest_phi = self.LINEAR_TO_ANGULAR_SCALER[1] * (dest_x_dot * math.cos(gamma) + dest_y_dot * math.sin(gamma))
-
-        dest_theta, dest_phi = np.clip(dest_theta, self.TILT_LIMITS[0], self.TILT_LIMITS[1]), \
-                               np.clip(dest_phi, self.TILT_LIMITS[0], self.TILT_LIMITS[1])
-
-        theta_error = dest_theta - theta
-        return np.linalg.norm([theta_error]), np.linalg.norm([theta_dot])
-
-    def set_LINEAR_PID(self, params):
+    def set_LINEAR_PID(self, params)->None:
         self.LINEAR_P = params[0]
         self.LINEAR_I = params[1]
         self.LINEAR_D = params[2]
 
-    def set_ANGULAR_PID(self, params):
+    def set_ANGULAR_PID(self, params)->None:
         self.ANGULAR_P = params[0]
         self.ANGULAR_I = params[1]
         self.ANGULAR_D = params[2]
 
     def get_ANGULAR_PID(self) -> np.ndarray:
         return np.array([self.ANGULAR_P, self.ANGULAR_I, self.ANGULAR_D])
+
+    def get_LINEAR_PID(self) -> np.ndarray:
+        return np.array([self.LINEAR_P, self.LINEAR_I, self.LINEAR_D])
 
     def reset(self):
         self.run = False

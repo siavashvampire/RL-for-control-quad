@@ -2,22 +2,22 @@ from app.models.attitude.learn_attitude_model import LearningAttitude
 
 
 def learn_attitude(app_name: str, max_iter: int):
-    if app_name == "attitude_discrete":
+    if "attitude_discrete" in app_name :
         env_name = "scripts:learn_attitude_ctrl_discrete_env-v0"
         policy = "MlpPolicy"
         max_integrate_time = 3
         random_start = False
-    elif app_name == "attitude_continuous":
+    elif "attitude_continuous" in app_name:
         env_name = "scripts:learn_attitude_ctrl_continuous_env-v0"
         policy = "MlpPolicy"
         max_integrate_time = 3
         random_start = False
-    elif app_name == "attitude_fragment":
+    elif "attitude_fragment" in app_name:
         env_name = "scripts:learn_attitude_ctrl_fragment_env-v0"
         policy = "MlpPolicy"
         max_integrate_time = 3
         random_start = False
-    elif app_name == "attitude_test":
+    elif "attitude_test" in app_name:
         env_name = "scripts:learn_attitude_ctrl_test_env-v0"
         policy = "MlpPolicy"
         max_integrate_time = 3

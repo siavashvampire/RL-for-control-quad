@@ -1,12 +1,14 @@
 import math
 import os
+from typing import Union
 
 import gym
+import jdatetime
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO,A2C
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 from tqdm import tqdm
@@ -16,7 +18,7 @@ from app.iteration_handler.iteration_handler import IterationHandler
 
 class PlayAltitude:
     num_fig: int
-    model: PPO
+    model: Union[PPO,A2C]
     times: int
     axes: list[Axes]
     figs: list[Figure]
@@ -40,7 +42,7 @@ class PlayAltitude:
 
         self.times = times
 
-        self.models_dir = f"models/{name}/"
+        self.models_dir = f"models/{self.name}/"
 
         self.num_fig = 9
         self.figs = []
@@ -103,7 +105,10 @@ class PlayAltitude:
             )
         )])
 
-        self.model = PPO.load(env=self.env, path=self.models_dir + self.file_name)
+        if "A2C" in self.name:
+            self.model = A2C.load(env=self.env, path=self.models_dir + self.file_name)
+        else:
+            self.model = PPO.load(env=self.env, path=self.models_dir + self.file_name)
 
         for i in tqdm(range(self.times), colour='green'):
             obs = self.env.reset()
@@ -150,7 +155,7 @@ class PlayAltitude:
                     gamma_dot_temp.append(angular_rate[2])
                     reward_temp.append(rewards)
                     trust_temp.append(self.env.envs[0].quad.get_trust())
-                    kp_temp.append(self.env.envs[0].last_p)
+                    # kp_temp.append(self.env.envs[0].last_p)
                 else:
                     reward_temp.append(rewards)
 
@@ -171,10 +176,9 @@ class PlayAltitude:
 
         self.env.envs[0].stop()
 
-        self.print_plot(file_name=str(self.env.envs[0].last_p))
+        self.print_plot(file_name=jdatetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
 
     def print_plot(self, file_name: str):
-
         for i in range(self.num_fig):
             self.axes[i].legend(range(1, self.times + 1))
 

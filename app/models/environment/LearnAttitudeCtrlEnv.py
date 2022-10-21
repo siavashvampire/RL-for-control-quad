@@ -144,8 +144,8 @@ class LearnAttitudeCtrlMain(gym.Env):
         reward = 0
         error, error_dot = self.ctrl.get_diff_angular()
 
-        error = abs(error * 180 / PI)/3
-        error_dot = abs(error_dot)/3
+        error = abs(error * 180 / PI) / 3
+        error_dot = abs(error_dot) / 3
 
         if error > 25:
             reward -= 50
@@ -189,7 +189,6 @@ class LearnAttitudeCtrlMain(gym.Env):
             reward = -200
             done = 1
 
-
         return reward, done
 
     def is_collision(self) -> bool:
@@ -210,9 +209,9 @@ class LearnAttitudeCtrlMain(gym.Env):
         quad.state[3:6] = np.zeros(3)
         quad.state[2] = 1
         quad.state[6:9] = quad.wrap_angle(quad.state[6:9])
-        quad.state[6] = round(quad.state[6], 10)
-        quad.state[7] = round(quad.state[7], 10)
-        quad.state[8] = round(quad.state[8], 10)
+        # quad.state[6] = round(quad.state[6], 10)
+        # quad.state[7] = round(quad.state[7], 10)
+        # quad.state[8] = round(quad.state[8], 10)
         quad.integrate_time += dt
 
     @staticmethod
@@ -230,6 +229,7 @@ class LearnAttitudeCtrlMain(gym.Env):
         state_dot[9] = omega_dot[0]
         state_dot[10] = omega_dot[1]
         state_dot[11] = omega_dot[2]
+
         return state_dot
 
     def stop(self):
@@ -299,10 +299,19 @@ class LearnAttitudeCtrlEnvContinuous(LearnAttitudeCtrlMain):
 
     def do_action(self, select_action: np.ndarray):
         select_action = select_action.reshape((3, 3))
-        select_action[:, 0] *= 40000
-        select_action[:, 1] *= 1
-        select_action[:, 2] *= 12000
+        # select_action[:, 0] *= 40000
+        # select_action[:, 1] *= 1
+        # select_action[:, 2] *= 12000
 
+        con_pid = [[70000, 2, 4000],
+                    [70000, 2, 4000],
+                    [12000, 2, 4000]]
+
+        for i in range(3):
+            for j in range(3):
+                select_action[i][j] *= con_pid[i][j]
+
+        select_action = np.array(select_action).transpose()
         self.ctrl.set_ANGULAR_PID(select_action)
 
     def step(self, action: np.ndarray):
@@ -347,8 +356,8 @@ class LearnAttitudeCtrlEnvDiscrete(LearnAttitudeCtrlMain):
                     temp_pid[i][j] += 0  # no action
 
                 if temp_pid[i][j] < 0:
-                    temp_pid[i][j] = 0.0
-
+                    temp_pid[i][j] = 0
+        temp_pid = np.array(temp_pid).transpose()
         self.ctrl.set_ANGULAR_PID(temp_pid)
 
 
@@ -356,45 +365,31 @@ class LearnAttitudeCtrlEnvFragment(LearnAttitudeCtrlMain):
     def __init__(self, count: int = 0, random_start: bool = True, max_integrate_time: int = 3):
         super().__init__(count=count, random_start=random_start, max_integrate_time=max_integrate_time)
         self.name = "attitude_fragment"
-        self.action_space = gym.spaces.Discrete(15)
+
+        self.action_space = gym.spaces.MultiDiscrete([15, 15, 15,
+                                                      15, 15, 15,
+                                                      15, 15, 15])
 
     def do_action(self, select_action):
-        angular_p_theta = 0
+        xp = [0, 14]
+        fp = [[0, 70000],
+              [0, 2],
+              [0, 12000],
+              [0, 70000],
+              [0, 2],
+              [0, 12000],
+              [0, 5000],
+              [0, 2],
+              [0, 12000]]
 
-        if select_action == 0:
-            angular_p_theta = 5
-        elif select_action == 1:
-            angular_p_theta = 10
-        elif select_action == 2:
-            angular_p_theta = 15
-        elif select_action == 3:
-            angular_p_theta = 20
-        elif select_action == 4:
-            angular_p_theta = 25
-        elif select_action == 5:
-            angular_p_theta = 30
-        elif select_action == 6:
-            angular_p_theta = 35
-        elif select_action == 7:
-            angular_p_theta = 40
-        elif select_action == 8:
-            angular_p_theta = 45
-        elif select_action == 9:
-            angular_p_theta = 50
-        elif select_action == 10:
-            angular_p_theta = 55
-        elif select_action == 11:
-            angular_p_theta = 60
-        elif select_action == 12:
-            angular_p_theta = 0
-        elif select_action == 13:
-            angular_p_theta = 65
-        elif select_action == 14:
-            angular_p_theta = 70
+        temp_pid = np.zeros((1, 9))[0]
 
-        angular_p_theta *= 1000
-        self.ctrl.set_angular_p_theta(angular_p_theta)
-        self.ctrl.set_angular_p_phi(angular_p_theta)
+        for i in range(9):
+            temp_pid[i] = np.interp(select_action[i], xp, fp[i])
+
+        temp_pid = temp_pid.reshape((3, 3))
+        temp_pid = np.array(temp_pid).transpose()
+        self.ctrl.set_ANGULAR_PID(temp_pid)
 
 
 class LearnAttitudeCtrlEnvTest(LearnAttitudeCtrlMain):
@@ -403,6 +398,8 @@ class LearnAttitudeCtrlEnvTest(LearnAttitudeCtrlMain):
         self.name = "attitude_test"
 
     def do_action(self, select_action):
-        angular_p_theta = 22000
-        self.ctrl.set_angular_p_theta(angular_p_theta)
-        self.ctrl.set_angular_p_phi(angular_p_theta)
+        temp_pid = [[22000, 22000, 1500],
+                    [0, 0, 1.2],
+                    [12000, 12000, 0]]
+
+        self.ctrl.set_ANGULAR_PID(temp_pid)

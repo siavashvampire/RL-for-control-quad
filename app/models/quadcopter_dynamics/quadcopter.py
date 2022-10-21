@@ -117,11 +117,6 @@ class Quadcopter:
         self.state[2] = max(0, self.state[2])
         self.integrate_time += dt
 
-        # print("------------------ Real ------------------")
-        # print("x = ", self.state[0], "y = ", self.state[1], "z = ", self.state[2])
-        # print("phi = ", self.state[6] * 180 / 3.14, "theta = ", self.state[7] * 180 / 3.14, "sai = ",
-        #       self.state[8] * 180 / 3.14)
-
     def set_motor_speeds(self, speeds):
         self.m1.set_speed(speeds[0])
         self.m2.set_speed(speeds[1])

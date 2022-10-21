@@ -26,7 +26,7 @@ CONTROLLER_PARAMETERS = {'Motor_limits': [2000, 5000],
                          'Linear_PID': {'P': [300, 300, 7000], 'I': [0.04, 0.04, 4.5], 'D': [450, 450, 5000]},
                          'Linear_To_Angular_Scaler': [1, 1, 0],
                          'Yaw_Rate_Scaler': 1,
-                         'Angular_PID': {'P': [0, 0, 60000], 'I': [0, 0, 1.2], 'D': [12000, 12000, 10000]},
+                         'Angular_PID': {'P': [22000, 22000, 1500], 'I': [0, 0, 1.2], 'D': [12000, 12000, 0]},
                          }
 
 PI = math.pi
@@ -38,7 +38,6 @@ class LearnAltitudeCtrlMain(gym.Env):
     settling_time: int = 20
     perv_action: int = 0
     max_integrate_time: int
-    last_p: int = 0
     count: int
     action_list: list[float] = []
     p_list: list[float] = []
@@ -60,8 +59,10 @@ class LearnAltitudeCtrlMain(gym.Env):
         self.quad.update = types.MethodType(self.quad_update, self.quad)
         self.quad.state_dot = types.MethodType(self.quad_state_dot, self.quad)
 
-        self.observation_space = gym.spaces.Box(low=-50, high=50, shape=(1, 3), dtype=np.float32)
-        self.action_space = gym.spaces.Discrete(3)
+        self.observation_space = gym.spaces.Box(low=-50, high=50, shape=(1, 15), dtype=np.float32)
+        self.action_space = gym.spaces.MultiDiscrete([3, 3, 3,
+                                                      3, 3, 3,
+                                                      3, 3, 3])
 
         self.info = {"collision": False}
         self.count = count
@@ -71,21 +72,15 @@ class LearnAltitudeCtrlMain(gym.Env):
 
     def step(self, action):
         self.do_action(action)
-        self.action_list.append(action)
-        self.p_list.append(self.last_p)
-        self.time_list.append(self.quad.integrate_time)
         obs, info = self.get_obs()
         reward, done = self.compute_reward()
         self.reward_list.append(reward)
-        self.obs1_list.append(obs[0])
-        self.obs2_list.append(obs[1])
-        self.obs3_list.append(obs[2])
         time.sleep(0.1)
         return obs, reward, done, info
 
     def reset(self):
         self.setup_flight()
-        self.print_steps()
+        # self.print_steps()
         self.action_list = []
         self.p_list = []
         self.reward_list = []
@@ -103,7 +98,6 @@ class LearnAltitudeCtrlMain(gym.Env):
     def setup_flight(self):
         self.settling_flag = False
         self.settling_time = 20
-        # self.last_p = 0
         self.quad.reset()
         self.ctrl.reset()
 
@@ -113,8 +107,6 @@ class LearnAltitudeCtrlMain(gym.Env):
                 (((-1, -1, -1) ** np.random.randint(0, 2, 3)) * (0.1 - np.random.random(3) * 0.05)).squeeze())
         else:
             self.quad.set_orientation((0.5, 0.5, 0))
-
-        obs, _ = self.get_obs()
 
         self.quad.set_position((0, 0, 1))
         # TODO:ma inja fght bara target sefr shoro kardim baad b fekr target tasadofi bashim
@@ -131,28 +123,36 @@ class LearnAltitudeCtrlMain(gym.Env):
     def get_obs(self):
         self.info["collision"] = self.is_collision()
         _, obs = self.ctrl.get_obs()
-        k_p = self.ctrl.get_angular_p_theta() / 40000
+        k = self.ctrl.get_LINEAR_PID()
 
-        return [obs[0][0], obs[0][1], k_p], self.info
+        k[:, 0] = np.divide(k[:, 0], 40000)
+        k[:, 1] = np.divide(k[:, 1], 1)
+        k[:, 2] = np.divide(k[:, 2], 12000)
+
+        k = k.reshape((1, 9))
+
+        k = np.concatenate(([[obs[0][0], obs[0][1], obs[1][0], obs[1][1], obs[2][0], obs[2][1]]], k), axis=1)
+        return k[0], self.info
 
     def compute_reward(self):
         done = 0
         reward = 0
-        e_theta, theta_dot = self.ctrl.get_diff_angular_theta()
-        e_theta = abs(e_theta * 180 / PI)
-        theta_dot = abs(theta_dot)
+        error, error_dot = self.ctrl.get_diff_linear()
 
-        if e_theta > 25:
+        error = abs(error) / 3
+        error_dot = abs(error_dot) / 3
+
+        if error > 1:
             reward -= 50
-        elif e_theta > 20:
+        elif error > 0.75:
             reward -= 30
-        elif e_theta > 15:
+        elif error > 0.5:
             reward -= 20
-        elif e_theta > 10:
+        elif error > 0.3:
             reward -= 10
-        elif e_theta > 5:
+        elif error > 0.2:
             reward -= 7
-        elif e_theta > 2:
+        elif error > 0.1:
             reward -= 1
         else:
             reward += 20
@@ -160,22 +160,16 @@ class LearnAltitudeCtrlMain(gym.Env):
                 self.settling_flag = True
                 self.settling_time = self.quad.integrate_time
 
-        if theta_dot > 1:
+        if error_dot > 1:
             reward -= 50
-        elif theta_dot > 0.5:
+        elif error_dot > 0.5:
             reward -= 30
-        elif theta_dot > 0.3:
+        elif error_dot > 0.3:
             reward -= 10
-        elif theta_dot > 0.1:
+        elif error_dot > 0.1:
             reward -= 5
         else:
             reward += 0
-
-        # reward = self.ctrl.get_diff_angular_theta() * -100
-        # if self.settling_flag:
-        #     reward -= (self.settling_time - 2) * 100
-        # elif self.quad.integrate_time > 2:
-        #     reward -= (self.quad.integrate_time - 2) * 100
 
         if self.quad.integrate_time > self.max_integrate_time:
             done = 1
@@ -183,9 +177,6 @@ class LearnAltitudeCtrlMain(gym.Env):
         if self.is_collision():
             reward = -200
             done = 1
-
-        # print("reward = ", reward)
-        # print("settling_time = ", self.settling_time)
 
         return reward, done
 
@@ -197,34 +188,6 @@ class LearnAltitudeCtrlMain(gym.Env):
         if abs(self.quad.state[8]) > 3.14 * 0.25:
             return True
         return False
-
-    @staticmethod
-    def quad_update(quad: Quadcopter, dt):
-        quad.ode.set_initial_value(quad.state, 0)
-
-        quad.state = quad.ode.integrate(quad.ode.t + dt)
-        quad.state[0:2] = np.zeros(2)
-        quad.state[3:6] = np.zeros(3)
-        quad.state[2] = 1
-        quad.state[6:9] = quad.wrap_angle(quad.state[6:9])
-        quad.integrate_time += dt
-
-    @staticmethod
-    def quad_state_dot(quad: Quadcopter, time, state):
-        state_dot = np.zeros(12)
-        state_dot[6] = quad.state[9]
-        state_dot[7] = quad.state[10]
-        state_dot[8] = quad.state[11]
-        # The angular accelerations
-        omega = quad.state[9:12]
-        tau = np.array([quad.L * (quad.m1.thrust - quad.m3.thrust),
-                        quad.L * (quad.m2.thrust - quad.m4.thrust),
-                        quad.b * (quad.m1.thrust - quad.m2.thrust + quad.m3.thrust - quad.m4.thrust)])
-        omega_dot = np.dot(quad.invI, (tau - np.cross(omega, np.dot(quad.I, omega))))
-        state_dot[9] = omega_dot[0]
-        state_dot[10] = omega_dot[1]
-        state_dot[11] = omega_dot[2]
-        return state_dot
 
     def stop(self):
         self.quad.reset()
@@ -289,25 +252,35 @@ class LearnAltitudeCtrlEnvContinuous(LearnAltitudeCtrlMain):
     def __init__(self, count: int = 0, random_start: bool = True, max_integrate_time: int = 3):
         super().__init__(count=count, random_start=random_start, max_integrate_time=max_integrate_time)
         self.name = "altitude_continuous"
-        self.action_space = gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
+        self.action_space = gym.spaces.Box(low=0, high=1, shape=(9,), dtype=np.float32)
 
-    def do_action(self, select_action):
-        angular_p_theta = select_action[0] * 40000
-        self.ctrl.set_angular_p_theta(angular_p_theta)
-        self.ctrl.set_angular_p_phi(angular_p_theta)
-        self.last_p = angular_p_theta
+    def do_action(self, select_action: np.ndarray):
+        select_action = select_action.reshape((3, 3))
+        # select_action[:, 0] *= 10000
+        # select_action[:, 1] *= 10
+        # select_action[:, 2] *= 10000
 
-    def step(self, action):
+        con_pid = [[600, 0.1, 1000],
+                    [600, 0.1, 1000],
+                    [14000, 10, 10000]]
+
+        for i in range(3):
+            for j in range(3):
+                select_action[i][j] *= con_pid[i][j]
+
+        select_action = np.array(select_action).transpose()
+        self.ctrl.set_LINEAR_PID(select_action)
+
+    def step(self, action: np.ndarray):
         self.do_action(action)
         self.action_list.append(action[0])
-        self.p_list.append(self.last_p)
         self.time_list.append(self.quad.integrate_time)
         obs, info = self.get_obs()
         reward, done = self.compute_reward()
         self.reward_list.append(reward)
-        self.obs1_list.append(obs[0])
-        self.obs2_list.append(obs[1])
-        self.obs3_list.append(obs[2])
+        # self.obs1_list.append(obs[0])
+        # self.obs2_list.append(obs[1])
+        # self.obs3_list.append(obs[2])
         time.sleep(0.1)
         return obs, reward, done, info
 
@@ -316,70 +289,64 @@ class LearnAltitudeCtrlEnvDiscrete(LearnAltitudeCtrlMain):
     def __init__(self, count: int = 0, random_start: bool = True, max_integrate_time: int = 3):
         super().__init__(count=count, random_start=random_start, max_integrate_time=max_integrate_time)
         self.name = "altitude_discrete"
-        self.action_space = gym.spaces.Discrete(3)
+        self.action_space = gym.spaces.MultiDiscrete([3, 3, 3,
+                                                      3, 3, 3,
+                                                      3, 3, 3])
 
     def do_action(self, select_action):
-        angular_p_theta = self.ctrl.get_angular_p_theta()
-        diff = 5000
-        if select_action == 0:
-            angular_p_theta += diff  # increase p
-        elif select_action == 1:
-            angular_p_theta -= diff  # decrease p
-        elif select_action == 2:
-            angular_p_theta += 0  # no action
+        select_action = select_action.reshape((3, 3))
+        linear_PID = self.ctrl.get_LINEAR_PID()
+        diff = [[10, 0.0014 * linear_PID[0][0], 0.012 * linear_PID[0][0]],
+                [10, 0.0014 * linear_PID[1][0], 0.012 * linear_PID[1][0]],
+                [1000, 0.0014 * linear_PID[2][0], 0.012 * linear_PID[2][0]]]
+        temp_pid = [[0, 0, 0],
+                    [0, 0, 0],
+                    [0, 0, 0]]
 
-        if angular_p_theta < 0:
-            angular_p_theta = 0
+        for i in range(3):
+            for j in range(3):
+                if select_action[i][j] == 0:
+                    temp_pid[i][j] += diff[i][j]  # increase p
+                elif select_action[i][j] == 1:
+                    temp_pid[i][j] -= diff[i][j]  # decrease p
+                elif select_action[i][j] == 2:
+                    temp_pid[i][j] += 0  # no action
 
-        self.ctrl.set_angular_p_theta(angular_p_theta)
-        self.ctrl.set_angular_p_phi(angular_p_theta)
-        self.last_p = angular_p_theta
+                if temp_pid[i][j] < 0:
+                    temp_pid[i][j] = 0
+        temp_pid = np.array(temp_pid).transpose()
+        self.ctrl.set_LINEAR_PID(temp_pid)
 
 
 class LearnAltitudeCtrlEnvFragment(LearnAltitudeCtrlMain):
     def __init__(self, count: int = 0, random_start: bool = True, max_integrate_time: int = 3):
         super().__init__(count=count, random_start=random_start, max_integrate_time=max_integrate_time)
         self.name = "altitude_fragment"
-        self.action_space = gym.spaces.Discrete(15)
+
+        self.action_space = gym.spaces.MultiDiscrete([15, 15, 15,
+                                                      15, 15, 15,
+                                                      15, 15, 15])
 
     def do_action(self, select_action):
-        angular_p_theta = 0
+        xp = [0, 14]
+        fp = [[0, 1000],
+              [0, 0.2],
+              [0, 2000],
+              [0, 1000],
+              [0, 0.2],
+              [0, 2000],
+              [0, 15000],
+              [0, 10],
+              [0, 10000]]
 
-        if select_action == 0:
-            angular_p_theta = 5
-        elif select_action == 1:
-            angular_p_theta = 10
-        elif select_action == 2:
-            angular_p_theta = 15
-        elif select_action == 3:
-            angular_p_theta = 20
-        elif select_action == 4:
-            angular_p_theta = 25
-        elif select_action == 5:
-            angular_p_theta = 30
-        elif select_action == 6:
-            angular_p_theta = 35
-        elif select_action == 7:
-            angular_p_theta = 40
-        elif select_action == 8:
-            angular_p_theta = 45
-        elif select_action == 9:
-            angular_p_theta = 50
-        elif select_action == 10:
-            angular_p_theta = 55
-        elif select_action == 11:
-            angular_p_theta = 60
-        elif select_action == 12:
-            angular_p_theta = 0
-        elif select_action == 13:
-            angular_p_theta = 65
-        elif select_action == 14:
-            angular_p_theta = 70
+        temp_pid = np.zeros((1, 9))[0]
 
-        angular_p_theta *= 1000
-        self.ctrl.set_angular_p_theta(angular_p_theta)
-        self.ctrl.set_angular_p_phi(angular_p_theta)
-        self.last_p = angular_p_theta
+        for i in range(9):
+            temp_pid[i] = np.interp(select_action[i], xp, fp[i])
+
+        temp_pid = temp_pid.reshape((3, 3))
+        temp_pid = np.array(temp_pid).transpose()
+        self.ctrl.set_LINEAR_PID(temp_pid)
 
 
 class LearnAltitudeCtrlEnvTest(LearnAltitudeCtrlMain):
@@ -388,7 +355,8 @@ class LearnAltitudeCtrlEnvTest(LearnAltitudeCtrlMain):
         self.name = "altitude_test"
 
     def do_action(self, select_action):
-        angular_p_theta = 22000
-        self.ctrl.set_angular_p_theta(angular_p_theta)
-        self.ctrl.set_angular_p_phi(angular_p_theta)
-        self.last_p = angular_p_theta
+        temp_pid = [[300, 300, 7000],
+                    [0.04, 0.04, 4.5],
+                    [450, 450, 5000]]
+
+        self.ctrl.set_ANGULAR_PID(temp_pid)
