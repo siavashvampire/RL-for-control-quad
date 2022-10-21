@@ -38,7 +38,6 @@ class LearnAttitudeCtrlMain(gym.Env):
     settling_time: int = 20
     perv_action: int = 0
     max_integrate_time: int
-    last_p: int = 0
     count: int
     action_list: list[float] = []
     p_list: list[float] = []
@@ -60,8 +59,10 @@ class LearnAttitudeCtrlMain(gym.Env):
         self.quad.update = types.MethodType(self.quad_update, self.quad)
         self.quad.state_dot = types.MethodType(self.quad_state_dot, self.quad)
 
-        self.observation_space = gym.spaces.Box(low=-50, high=50, shape=(1, 3), dtype=np.float32)
-        self.action_space = gym.spaces.Discrete(3)
+        self.observation_space = gym.spaces.Box(low=-50, high=50, shape=(1, 15), dtype=np.float32)
+        self.action_space = gym.spaces.MultiDiscrete([3, 3, 3,
+                                                      3, 3, 3,
+                                                      3, 3, 3])
 
         self.info = {"collision": False}
         self.count = count
@@ -71,21 +72,20 @@ class LearnAttitudeCtrlMain(gym.Env):
 
     def step(self, action):
         self.do_action(action)
-        self.action_list.append(action)
-        self.p_list.append(self.last_p)
-        self.time_list.append(self.quad.integrate_time)
+        # self.action_list.append(action)
+        # self.time_list.append(self.quad.integrate_time)
         obs, info = self.get_obs()
         reward, done = self.compute_reward()
         self.reward_list.append(reward)
-        self.obs1_list.append(obs[0])
-        self.obs2_list.append(obs[1])
-        self.obs3_list.append(obs[2])
+        # self.obs1_list.append(obs[0])
+        # self.obs2_list.append(obs[1])
+        # self.obs3_list.append(obs[2])
         time.sleep(0.1)
         return obs, reward, done, info
 
     def reset(self):
         self.setup_flight()
-        self.print_steps()
+        # self.print_steps()
         self.action_list = []
         self.p_list = []
         self.reward_list = []
@@ -103,7 +103,6 @@ class LearnAttitudeCtrlMain(gym.Env):
     def setup_flight(self):
         self.settling_flag = False
         self.settling_time = 20
-        # self.last_p = 0
         self.quad.reset()
         self.ctrl.reset()
 
@@ -113,8 +112,6 @@ class LearnAttitudeCtrlMain(gym.Env):
                 (((-1, -1, -1) ** np.random.randint(0, 2, 3)) * (0.1 - np.random.random(3) * 0.05)).squeeze())
         else:
             self.quad.set_orientation((0.5, 0.5, 0))
-
-        obs, _ = self.get_obs()
 
         self.quad.set_position((0, 0, 1))
         # TODO:ma inja fght bara target sefr shoro kardim baad b fekr target tasadofi bashim
@@ -131,28 +128,36 @@ class LearnAttitudeCtrlMain(gym.Env):
     def get_obs(self):
         self.info["collision"] = self.is_collision()
         _, obs = self.ctrl.get_obs()
-        k_p = self.ctrl.get_angular_p_theta() / 40000
+        k = self.ctrl.get_ANGULAR_PID()
 
-        return [obs[0][0], obs[0][1], k_p], self.info
+        k[:, 0] = np.divide(k[:, 0], 40000)
+        k[:, 1] = np.divide(k[:, 1], 1)
+        k[:, 2] = np.divide(k[:, 2], 12000)
+
+        k = k.reshape((1, 9))
+
+        k = np.concatenate(([[obs[0][0], obs[0][1], obs[1][0], obs[1][1], obs[2][0], obs[2][1]]], k), axis=1)
+        return k[0], self.info
 
     def compute_reward(self):
         done = 0
         reward = 0
-        e_theta, theta_dot = self.ctrl.get_diff_angular_theta()
-        e_theta = abs(e_theta * 180 / PI)
-        theta_dot = abs(theta_dot)
+        error, error_dot = self.ctrl.get_diff_angular()
 
-        if e_theta > 25:
+        error = abs(error * 180 / PI)/3
+        error_dot = abs(error_dot)/3
+
+        if error > 25:
             reward -= 50
-        elif e_theta > 20:
+        elif error > 20:
             reward -= 30
-        elif e_theta > 15:
+        elif error > 15:
             reward -= 20
-        elif e_theta > 10:
+        elif error > 10:
             reward -= 10
-        elif e_theta > 5:
+        elif error > 5:
             reward -= 7
-        elif e_theta > 2:
+        elif error > 2:
             reward -= 1
         else:
             reward += 20
@@ -160,13 +165,13 @@ class LearnAttitudeCtrlMain(gym.Env):
                 self.settling_flag = True
                 self.settling_time = self.quad.integrate_time
 
-        if theta_dot > 1:
+        if error_dot > 1:
             reward -= 50
-        elif theta_dot > 0.5:
+        elif error_dot > 0.5:
             reward -= 30
-        elif theta_dot > 0.3:
+        elif error_dot > 0.3:
             reward -= 10
-        elif theta_dot > 0.1:
+        elif error_dot > 0.1:
             reward -= 5
         else:
             reward += 0
@@ -184,8 +189,6 @@ class LearnAttitudeCtrlMain(gym.Env):
             reward = -200
             done = 1
 
-        # print("reward = ", reward)
-        # print("settling_time = ", self.settling_time)
 
         return reward, done
 
@@ -207,6 +210,9 @@ class LearnAttitudeCtrlMain(gym.Env):
         quad.state[3:6] = np.zeros(3)
         quad.state[2] = 1
         quad.state[6:9] = quad.wrap_angle(quad.state[6:9])
+        quad.state[6] = round(quad.state[6], 10)
+        quad.state[7] = round(quad.state[7], 10)
+        quad.state[8] = round(quad.state[8], 10)
         quad.integrate_time += dt
 
     @staticmethod
@@ -293,20 +299,22 @@ class LearnAttitudeCtrlEnvContinuous(LearnAttitudeCtrlMain):
 
     def do_action(self, select_action: np.ndarray):
         select_action = select_action.reshape((3, 3))
-        self.ctrl.set_ANGULAR_PID(select_action)
-        self.last_p = select_action[0][0]
+        select_action[:, 0] *= 40000
+        select_action[:, 1] *= 1
+        select_action[:, 2] *= 12000
 
-    def step(self, action):
+        self.ctrl.set_ANGULAR_PID(select_action)
+
+    def step(self, action: np.ndarray):
         self.do_action(action)
         self.action_list.append(action[0])
-        self.p_list.append(self.last_p)
         self.time_list.append(self.quad.integrate_time)
         obs, info = self.get_obs()
         reward, done = self.compute_reward()
         self.reward_list.append(reward)
-        self.obs1_list.append(obs[0])
-        self.obs2_list.append(obs[1])
-        self.obs3_list.append(obs[2])
+        # self.obs1_list.append(obs[0])
+        # self.obs2_list.append(obs[1])
+        # self.obs3_list.append(obs[2])
         time.sleep(0.1)
         return obs, reward, done, info
 
@@ -315,24 +323,33 @@ class LearnAttitudeCtrlEnvDiscrete(LearnAttitudeCtrlMain):
     def __init__(self, count: int = 0, random_start: bool = True, max_integrate_time: int = 3):
         super().__init__(count=count, random_start=random_start, max_integrate_time=max_integrate_time)
         self.name = "attitude_discrete"
-        self.action_space = gym.spaces.Discrete(3)
+        self.action_space = gym.spaces.MultiDiscrete([3, 3, 3,
+                                                      3, 3, 3,
+                                                      3, 3, 3])
 
     def do_action(self, select_action):
-        angular_p_theta = self.ctrl.get_angular_p_theta()
-        diff = 5000
-        if select_action == 0:
-            angular_p_theta += diff  # increase p
-        elif select_action == 1:
-            angular_p_theta -= diff  # decrease p
-        elif select_action == 2:
-            angular_p_theta += 0  # no action
+        select_action = select_action.reshape((3, 3))
+        angular_PID = self.ctrl.get_ANGULAR_PID()
+        diff = [[5000, 0.0014 * angular_PID[0][0], 0.012 * angular_PID[0][0]],
+                [5000, 0.0014 * angular_PID[1][0], 0.012 * angular_PID[1][0]],
+                [400, 0.0014 * angular_PID[2][0], 0.012 * angular_PID[2][0]]]
+        temp_pid = [[0, 0, 0],
+                    [0, 0, 0],
+                    [0, 0, 0]]
 
-        if angular_p_theta < 0:
-            angular_p_theta = 0
+        for i in range(3):
+            for j in range(3):
+                if select_action[i][j] == 0:
+                    temp_pid[i][j] += diff[i][j]  # increase p
+                elif select_action[i][j] == 1:
+                    temp_pid[i][j] -= diff[i][j]  # decrease p
+                elif select_action[i][j] == 2:
+                    temp_pid[i][j] += 0  # no action
 
-        self.ctrl.set_angular_p_theta(angular_p_theta)
-        self.ctrl.set_angular_p_phi(angular_p_theta)
-        self.last_p = angular_p_theta
+                if temp_pid[i][j] < 0:
+                    temp_pid[i][j] = 0.0
+
+        self.ctrl.set_ANGULAR_PID(temp_pid)
 
 
 class LearnAttitudeCtrlEnvFragment(LearnAttitudeCtrlMain):
@@ -378,7 +395,6 @@ class LearnAttitudeCtrlEnvFragment(LearnAttitudeCtrlMain):
         angular_p_theta *= 1000
         self.ctrl.set_angular_p_theta(angular_p_theta)
         self.ctrl.set_angular_p_phi(angular_p_theta)
-        self.last_p = angular_p_theta
 
 
 class LearnAttitudeCtrlEnvTest(LearnAttitudeCtrlMain):
@@ -390,4 +406,3 @@ class LearnAttitudeCtrlEnvTest(LearnAttitudeCtrlMain):
         angular_p_theta = 22000
         self.ctrl.set_angular_p_theta(angular_p_theta)
         self.ctrl.set_angular_p_phi(angular_p_theta)
-        self.last_p = angular_p_theta

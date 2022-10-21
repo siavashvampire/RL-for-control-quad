@@ -2,6 +2,7 @@ import math
 import os
 
 import gym
+import jdatetime
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
@@ -150,7 +151,7 @@ class PlayAttitude:
                     gamma_dot_temp.append(angular_rate[2])
                     reward_temp.append(rewards)
                     trust_temp.append(self.env.envs[0].quad.get_trust())
-                    kp_temp.append(self.env.envs[0].last_p)
+                    # kp_temp.append(self.env.envs[0].last_p)
                 else:
                     reward_temp.append(rewards)
 
@@ -171,7 +172,7 @@ class PlayAttitude:
 
         self.env.envs[0].stop()
 
-        self.print_plot(file_name=str(self.env.envs[0].last_p))
+        self.print_plot(file_name=jdatetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
 
     def print_plot(self, file_name: str):
         for i in range(self.num_fig):

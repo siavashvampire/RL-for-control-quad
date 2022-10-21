@@ -137,7 +137,7 @@ class ControllerPID:
 
     def get_diff_angular(self):
         [dest_x, dest_y, _] = self.target
-        [x, y, _, x_dot, y_dot, _, theta, phi, gamma, _, _, _] = self.get_state()
+        [x, y, _, x_dot, y_dot, _, theta, phi, gamma, theta_dot, phi_dot, gamma_dot] = self.get_state()
 
         x_error = dest_x - x
         y_error = dest_y - y
@@ -154,7 +154,7 @@ class ControllerPID:
         gamma_error = self.wrap_angle(dest_gamma - gamma)
         theta_error = dest_theta - theta
         phi_error = dest_phi - phi
-        return np.linalg.norm([theta_error, phi_error, gamma_error])
+        return np.linalg.norm([theta_error, phi_error, gamma_error]), np.linalg.norm([theta_dot, phi_dot, gamma_dot])
 
     def get_diff_angular_theta(self):
         [dest_x, dest_y, _] = self.target
@@ -185,14 +185,8 @@ class ControllerPID:
         self.ANGULAR_I = params[1]
         self.ANGULAR_D = params[2]
 
-    def set_angular_p_theta(self, theta_p):
-        self.ANGULAR_P[0] = theta_p
-
-    def set_angular_p_phi(self, phi_p):
-        self.ANGULAR_P[1] = phi_p
-
-    def get_angular_p_theta(self):
-        return self.ANGULAR_P[0]
+    def get_ANGULAR_PID(self) -> np.ndarray:
+        return np.array([self.ANGULAR_P, self.ANGULAR_I, self.ANGULAR_D])
 
     def reset(self):
         self.run = False
@@ -212,8 +206,9 @@ class ControllerPID:
         self.I_gamma = 0
         self.target = [0, 0, 0]
         self.yaw_target = 0.0
-        self.set_angular_p_theta(0)
-        self.set_angular_p_phi(0)
+        self.set_ANGULAR_PID([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+        # self.set_angular_p_theta(0)
+        # self.set_angular_p_phi(0)
 
     def get_obs(self):
         [dest_x, dest_y, dest_z] = self.target

@@ -29,6 +29,5 @@ def learn_attitude(app_name: str, max_iter: int):
         random_start = False
 
     learning_attitude = LearningAttitude(name=app_name, env_name=env_name, policy=policy,
-                                         max_integrate_time=max_integrate_time,
-                                         random_start=random_start)
+                                         max_integrate_time=max_integrate_time, random_start=random_start)
     learning_attitude.learn(max_iter=max_iter)
