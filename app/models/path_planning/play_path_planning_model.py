@@ -31,7 +31,7 @@ class PlayPathPlanning:
     env: VecTransposeImage
     random_start: bool
 
-    def __init__(self, name: str, file_name: str, env_name: str, times: int = 5,continue_flag:bool = False,
+    def __init__(self, name: str, file_name: str, env_name: str, times: int = 5, continue_flag: bool = False,
                  random_start: bool = True):
         self.name = name
         self.file_name = file_name

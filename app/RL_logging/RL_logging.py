@@ -8,11 +8,11 @@ chrome_options.add_experimental_option("detach", True)
 
 
 def open_log_web() -> WebDriver:
-    subprocess.Popen("tensorboard --logdir=logs", shell=True)
+    subprocess.Popen("tensorboard --logdir=logs --host=0.0.0.0 --port=8585", shell=True)
 
     driver: WebDriver = webdriver.Chrome(options=chrome_options)
     try:
-        driver.get("http://localhost:6006/")
+        driver.get("http://localhost:8585/")
     except:
         pass
     return driver

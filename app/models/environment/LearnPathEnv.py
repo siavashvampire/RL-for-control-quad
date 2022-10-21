@@ -11,8 +11,8 @@ class LearnPathEnv(gym.Env):
     target_pos_idx: int = 0
     agent_start_pos: int
 
-    def __init__(self, ip_address: str, image_shape: tuple[3, 1], env_config: dict, continue_flag: bool,
-                 random_start: bool):
+    def __init__(self, ip_address: str, image_shape: tuple[3, 1], env_config: dict, continue_flag: bool=False,
+                 random_start: bool = True):
         self.image_shape = image_shape
         self.sections = env_config["sections"]
 

@@ -31,12 +31,14 @@ class LearningPathPlanning:
     model: PPO
     max_integrate_time: int
     random_start: bool
+    continue_flag: bool
 
-    def __init__(self, name: str, env_name: str, policy: str, random_start: bool = True):
+    def __init__(self, name: str, env_name: str, policy: str,continue_flag:bool = False, random_start: bool = True):
         self.name = name
         self.env_name = env_name
         self.policy = policy
         self.random_start = random_start
+        self.continue_flag = continue_flag
         self.iteration_handler = IterationHandler(name)
         self.models_dir = f"models/{self.name}/"
         self.logdir = f"logs/{self.name}/"
@@ -52,7 +54,7 @@ class LearningPathPlanning:
         open_airsim_train_env()
         self.driver = open_log_web()
 
-        with open('../../scripts/config.yml', 'r') as f:
+        with open('./scripts/config.yml', 'r') as f:
             env_config = yaml.safe_load(f)
 
         time_steps = 10000
@@ -60,10 +62,13 @@ class LearningPathPlanning:
         # Create a DummyVecEnv
         env = DummyVecEnv([lambda: Monitor(
             gym.make(
-                "scripts:learn_path-env-v0",
+                "scripts:learn_path_env-v0",
                 ip_address="127.0.0.1",
                 image_shape=(50, 50, 3),
-                env_config=env_config["TrainEnv"]
+                env_config=env_config["TrainEnv"],
+                random_start = self.random_start,
+                continue_flag = self.continue_flag
+
             )
         )])
 
@@ -97,7 +102,6 @@ class LearningPathPlanning:
             self.model.learn(total_timesteps=time_steps, reset_num_timesteps=False, tb_log_name=f"PPO", **kwargs)
             self.model.save(f"{self.models_dir}/{time_steps * iters}")
             self.iteration_handler.write_iter(iters)
-            self.iteration_handler.write_count(self.env.envs[0].count)
 
         self.env.envs[0].stop()
         self.driver.close()
