@@ -289,13 +289,12 @@ class LearnAttitudeCtrlEnvContinuous(LearnAttitudeCtrlMain):
     def __init__(self, count: int = 0, random_start: bool = True, max_integrate_time: int = 3):
         super().__init__(count=count, random_start=random_start, max_integrate_time=max_integrate_time)
         self.name = "attitude_continuous"
-        self.action_space = gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
+        self.action_space = gym.spaces.Box(low=0, high=1, shape=(9,), dtype=np.float32)
 
-    def do_action(self, select_action):
-        angular_p_theta = select_action[0] * 40000
-        self.ctrl.set_angular_p_theta(angular_p_theta)
-        self.ctrl.set_angular_p_phi(angular_p_theta)
-        self.last_p = angular_p_theta
+    def do_action(self, select_action: np.ndarray):
+        select_action = select_action.reshape((3, 3))
+        self.ctrl.set_ANGULAR_PID(select_action)
+        self.last_p = select_action[0][0]
 
     def step(self, action):
         self.do_action(action)
