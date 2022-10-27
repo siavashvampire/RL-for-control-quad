@@ -156,12 +156,12 @@ class ControllerPID:
         phi_error = dest_phi - phi
         return np.linalg.norm([theta_error, phi_error, gamma_error]), np.linalg.norm([theta_dot, phi_dot, gamma_dot])
 
-    def set_LINEAR_PID(self, params)->None:
+    def set_LINEAR_PID(self, params) -> None:
         self.LINEAR_P = params[0]
         self.LINEAR_I = params[1]
         self.LINEAR_D = params[2]
 
-    def set_ANGULAR_PID(self, params)->None:
+    def set_ANGULAR_PID(self, params) -> None:
         self.ANGULAR_P = params[0]
         self.ANGULAR_I = params[1]
         self.ANGULAR_D = params[2]
