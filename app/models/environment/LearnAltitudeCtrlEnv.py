@@ -1,7 +1,6 @@
 import math
 import os
 import time
-import types
 
 import gym
 import numpy as np
@@ -56,8 +55,8 @@ class LearnAltitudeCtrlMain(gym.Env):
                                   actuate_motors=self.quad.set_motor_speeds,
                                   params=CONTROLLER_PARAMETERS)
 
-        self.quad.update = types.MethodType(self.quad_update, self.quad)
-        self.quad.state_dot = types.MethodType(self.quad_state_dot, self.quad)
+        # self.quad.update = types.MethodType(self.quad_update, self.quad)
+        # self.quad.state_dot = types.MethodType(self.quad_state_dot, self.quad)
 
         self.observation_space = gym.spaces.Box(low=-50, high=50, shape=(1, 15), dtype=np.float32)
         self.action_space = gym.spaces.MultiDiscrete([3, 3, 3,
@@ -125,9 +124,9 @@ class LearnAltitudeCtrlMain(gym.Env):
         _, obs = self.ctrl.get_obs()
         k = self.ctrl.get_LINEAR_PID()
 
-        k[:, 0] = np.divide(k[:, 0], 40000)
-        k[:, 1] = np.divide(k[:, 1], 1)
-        k[:, 2] = np.divide(k[:, 2], 12000)
+        k[0, :] = np.divide(k[0, :], 40000)
+        k[1, :] = np.divide(k[1, :], 1)
+        k[2, :] = np.divide(k[2, :], 12000)
 
         k = k.reshape((1, 9))
 
