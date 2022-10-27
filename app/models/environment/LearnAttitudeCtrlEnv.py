@@ -130,18 +130,19 @@ class LearnAttitudeCtrlMain(gym.Env):
         _, obs = self.ctrl.get_obs()
         k = self.ctrl.get_ANGULAR_PID()
 
-        k[:, 0] = np.divide(k[:, 0], 40000)
-        k[:, 1] = np.divide(k[:, 1], 1)
-        k[:, 2] = np.divide(k[:, 2], 12000)
+        k[0, :] = np.divide(k[0, :], 40000)
+        k[1, :] = np.divide(k[1, :], 1)
+        k[2, :] = np.divide(k[2, :], 12000)
 
+        # TODO:inja ghalate fekr konam barresi beshe
         k = k.reshape((1, 9))
 
         k = np.concatenate(([[obs[0][0], obs[0][1], obs[1][0], obs[1][1], obs[2][0], obs[2][1]]], k), axis=1)
         return k[0], self.info
 
-    def compute_reward(self):
-        done = 0
-        reward = 0
+    def compute_reward(self) -> (int, int):
+        done: int = 0
+        reward: int = 0
         error, error_dot = self.ctrl.get_diff_angular()
 
         error = abs(error * 180 / PI) / 3
@@ -304,8 +305,8 @@ class LearnAttitudeCtrlEnvContinuous(LearnAttitudeCtrlMain):
         # select_action[:, 2] *= 12000
 
         con_pid = [[70000, 2, 4000],
-                    [70000, 2, 4000],
-                    [12000, 2, 4000]]
+                   [70000, 2, 4000],
+                   [12000, 2, 4000]]
 
         for i in range(3):
             for j in range(3):
