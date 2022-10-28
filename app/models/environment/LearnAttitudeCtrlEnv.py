@@ -39,6 +39,7 @@ class LearnAttitudeCtrlMain(gym.Env):
     perv_action: int = 0
     max_integrate_time: int
     count: int
+    plot_count: int
     action_list: list[float] = []
     p_list: list[float] = []
     reward_list: list[int] = []
@@ -70,22 +71,32 @@ class LearnAttitudeCtrlMain(gym.Env):
         self.random_start = random_start
         self.max_integrate_time = max_integrate_time
 
+        self.plot_count = 5
+
     def step(self, action):
         self.do_action(action)
         # self.action_list.append(action)
-        # self.time_list.append(self.quad.integrate_time)
+        self.time_list.append(self.quad.integrate_time)
         obs, info = self.get_obs()
         reward, done = self.compute_reward()
         self.reward_list.append(reward)
-        # self.obs1_list.append(obs[0])
-        # self.obs2_list.append(obs[1])
-        # self.obs3_list.append(obs[2])
+        self.obs1_list.append(obs[0])
+        self.obs2_list.append(obs[1])
+        self.obs3_list.append(obs[2])
+
+        # last_update = self.time
+        #
+        # time.sleep(0)
+        # self.time = datetime.datetime.now()
+        # if (self.time - last_update).total_seconds() > rate:
+        #     self.update(dt)
+        #     last_update = self.time
         time.sleep(0.1)
         return obs, reward, done, info
 
     def reset(self):
         self.setup_flight()
-        # self.print_steps()
+        self.print_steps()
         self.action_list = []
         self.p_list = []
         self.reward_list = []
@@ -95,6 +106,9 @@ class LearnAttitudeCtrlMain(gym.Env):
         self.time_list = []
         self.count += 1
         obs, _ = self.get_obs()
+
+        self.ctrl.start_thread()
+        self.quad.start_thread()
         return obs
 
     def render(self):
@@ -119,8 +133,6 @@ class LearnAttitudeCtrlMain(gym.Env):
         self.ctrl.update_target((0, 0, 1))
         self.ctrl.update_yaw_target(0)
 
-        self.ctrl.start_thread()
-        self.quad.start_thread()
 
     def do_action(self, select_action):
         pass
@@ -137,7 +149,7 @@ class LearnAttitudeCtrlMain(gym.Env):
         # TODO:inja ghalate fekr konam barresi beshe
         k = k.reshape((1, 9))
 
-        k = np.concatenate(([[obs[0][0], obs[0][1], obs[1][0], obs[1][1], obs[2][0], obs[2][1]]], k), axis=1)
+        k = np.concatenate(([[obs[0][0], obs[1][0], obs[2][0], obs[0][1], obs[1][1], obs[2][1]]], k), axis=1)
         return k[0], self.info
 
     def compute_reward(self) -> (int, int):
@@ -241,7 +253,7 @@ class LearnAttitudeCtrlMain(gym.Env):
         figs: list[Figure] = []
         axes: list[Axes] = []
 
-        for i in range(5):
+        for i in range(self.plot_count):
             figs.append(plt.figure())
             axes.append(figs[i].add_axes((0.1, 0.1, 0.8, 0.8)))
 
@@ -249,33 +261,33 @@ class LearnAttitudeCtrlMain(gym.Env):
         axes[0].set_xlabel('time')
         axes[0].set_ylabel('theta')
 
-        axes[1].set_title('action vs time')
+        axes[1].set_title('phi vs time')
         axes[1].set_xlabel('time')
-        axes[1].set_ylabel('action')
+        axes[1].set_ylabel('phi')
 
-        axes[2].set_title('reward vs time')
+        axes[2].set_title('gamma vs time')
         axes[2].set_xlabel('time')
-        axes[2].set_ylabel('reward')
+        axes[2].set_ylabel('gamma')
 
-        axes[3].set_title('theta dot vs time')
+
+        axes[3].set_title('reward vs time')
         axes[3].set_xlabel('time')
-        axes[3].set_ylabel('theta dot')
+        axes[3].set_ylabel('reward')
+
 
         axes[4].set_title('p vs time')
         axes[4].set_xlabel('time')
         axes[4].set_ylabel('P')
 
         axes[0].plot(self.time_list, self.obs1_list, linewidth=1)
-        axes[1].plot(self.time_list, self.action_list, linewidth=1)
-        axes[2].plot(self.time_list, self.reward_list, linewidth=1)
-        axes[3].plot(self.time_list, self.obs2_list, linewidth=1)
-        axes[4].plot(self.time_list, self.p_list, linewidth=1)
+        axes[1].plot(self.time_list, self.obs2_list, linewidth=1)
+        axes[2].plot(self.time_list, self.obs3_list, linewidth=1)
+        axes[3].plot(self.time_list, self.reward_list, linewidth=1)
 
         axes[0].scatter(self.time_list, self.obs1_list)
-        axes[1].scatter(self.time_list, self.action_list)
-        axes[2].scatter(self.time_list, self.reward_list)
-        axes[3].scatter(self.time_list, self.obs2_list)
-        axes[4].scatter(self.time_list, self.p_list)
+        axes[1].scatter(self.time_list, self.obs2_list)
+        axes[2].scatter(self.time_list, self.obs3_list)
+        axes[3].scatter(self.time_list, self.reward_list)
 
         result_dir = f'learn_result/{self.name}/{self.count}/'
 
@@ -283,12 +295,11 @@ class LearnAttitudeCtrlMain(gym.Env):
             os.makedirs(result_dir)
 
         figs[0].savefig(result_dir + '1.theta vs time.png')
-        figs[1].savefig(result_dir + '2.action vs time.png')
-        figs[2].savefig(result_dir + '3.reward vs time.png')
-        figs[3].savefig(result_dir + '4.theta dot vs time.png')
-        figs[4].savefig(result_dir + '5.p vs time.png')
+        figs[1].savefig(result_dir + '2.phi vs time.png')
+        figs[2].savefig(result_dir + '3.gamma vs time.png')
+        figs[3].savefig(result_dir + '4.reward vs time.png')
 
-        for i in range(5):
+        for i in range(self.plot_count):
             plt.close(figs[i])
 
 
@@ -367,21 +378,21 @@ class LearnAttitudeCtrlEnvFragment(LearnAttitudeCtrlMain):
         super().__init__(count=count, random_start=random_start, max_integrate_time=max_integrate_time)
         self.name = "attitude_fragment"
 
-        self.action_space = gym.spaces.MultiDiscrete([15, 15, 15,
-                                                      15, 15, 15,
-                                                      15, 15, 15])
+        # self.action_space = gym.spaces.MultiDiscrete([15, 15, 15,
+        #                                               15, 15, 15,
+        #                                               15, 15, 15])
 
     def do_action(self, select_action):
         xp = [0, 14]
         fp = [[0, 70000],
-              [0, 2],
+              [0, 1],
               [0, 12000],
               [0, 70000],
-              [0, 2],
+              [0, 1],
               [0, 12000],
               [0, 5000],
               [0, 2],
-              [0, 12000]]
+              [0, 1]]
 
         temp_pid = np.zeros((1, 9))[0]
 
@@ -390,6 +401,12 @@ class LearnAttitudeCtrlEnvFragment(LearnAttitudeCtrlMain):
 
         temp_pid = temp_pid.reshape((3, 3))
         temp_pid = np.array(temp_pid).transpose()
+
+        # print(temp_pid)
+        # temp_pid = [[22000, 22000, 1500],
+        #             [0, 0, 1.2],
+        #             [12000, 12000, 0]]
+
         self.ctrl.set_ANGULAR_PID(temp_pid)
 
 
