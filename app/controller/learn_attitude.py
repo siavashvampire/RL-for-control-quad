@@ -2,7 +2,7 @@ from app.models.attitude.learn_attitude_model import LearningAttitude
 
 
 def learn_attitude(app_name: str, max_iter: int):
-    if "attitude_discrete" in app_name :
+    if "attitude_discrete" in app_name:
         env_name = "scripts:learn_attitude_ctrl_discrete_env-v0"
         policy = "MlpPolicy"
         max_integrate_time = 3
