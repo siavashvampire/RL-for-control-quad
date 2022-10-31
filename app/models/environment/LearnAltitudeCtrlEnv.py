@@ -45,15 +45,17 @@ class LearnAltitudeCtrlMain(gym.Env):
     obs3_list: list[float] = []
     time_list: list[float] = []
     name: str = "altitude_main"
-    fp: list = [[20000, 70000],
-                [0, 0],
-                [8000, 15000],
-                [20000, 70000],
-                [0, 0],
-                [8000, 15000],
-                [1000, 3000],
-                [1, 2],
-                [0, 1]]
+    fp: list = [[100, 1000],
+                [0.01, 0.1],
+                [100, 1000],
+                [100, 1000],
+                [0.01, 0.1],
+                [100, 1000],
+                [5000, 15000],
+                [3, 10],
+                [2000, 10000]]
+
+    # {'P': [300, 300, 7000], 'I': [0.04, 0.04, 4.5], 'D': [450, 450, 5000]}
 
     def __init__(self, count: int = 0, random_start: bool = True, max_integrate_time: int = 3):
         self.quad = Quadcopter(QUAD_PARAMETERS)
@@ -120,16 +122,20 @@ class LearnAltitudeCtrlMain(gym.Env):
             self.quad.set_position(
                 (((-1, -1, -1) ** np.random.randint(0, 2, 3)) * (0.1 - np.random.random(3) * 0.05)).squeeze())
         else:
-            self.quad.set_position((0.5, 0.5, 1))
+            self.quad.set_position((0, 0, 1))
 
         self.quad.set_orientation((0, 0, 0))
         # TODO:ma inja fght bara target sefr shoro kardim baad b fekr target tasadofi bashim
 
-        self.ctrl.update_target((0, 0, 1))
+        self.ctrl.update_target((1, 1, 2))
         self.ctrl.update_yaw_target(0)
 
     def do_action(self, select_action: np.ndarray):
-        pass
+        temp_pid = [[22000, 22000, 1500],
+                    [0, 0, 1.2],
+                    [12000, 12000, 0]]
+
+        self.ctrl.set_ANGULAR_PID(temp_pid)
 
     def get_obs(self):
         self.info["collision"] = self.is_collision()
@@ -266,6 +272,7 @@ class LearnAltitudeCtrlEnvContinuous(LearnAltitudeCtrlMain):
         self.action_space = gym.spaces.Box(low=0, high=1, shape=(9,), dtype=np.float32)
 
     def do_action(self, select_action: np.ndarray):
+        super(LearnAltitudeCtrlEnvContinuous, self).do_action(select_action)
         select_action = select_action.reshape((3, 3))
 
         for i in range(3):
@@ -286,6 +293,7 @@ class LearnAltitudeCtrlEnvDiscrete(LearnAltitudeCtrlMain):
                                                       3, 3, 3])
 
     def do_action(self, select_action: np.ndarray):
+        super(LearnAltitudeCtrlEnvDiscrete, self).do_action(select_action)
         select_action = select_action.reshape((3, 3))
         linear_PID = self.ctrl.get_LINEAR_PID()
         diff = np.array([[10, 0.0014 * linear_PID[0][0], 0.012 * linear_PID[0][0]],
@@ -323,6 +331,7 @@ class LearnAltitudeCtrlEnvFragment(LearnAltitudeCtrlMain):
                                                       15, 15, 15])
 
     def do_action(self, select_action: np.ndarray):
+        super(LearnAltitudeCtrlEnvFragment, self).do_action(select_action)
         xp: list = [0, 14]
 
         temp_pid = np.zeros((1, 9))[0]
@@ -342,6 +351,8 @@ class LearnAltitudeCtrlEnvTest(LearnAltitudeCtrlMain):
         self.name = "altitude_test"
 
     def do_action(self, select_action: np.ndarray):
+        super(LearnAltitudeCtrlEnvTest, self).do_action(select_action)
+
         temp_pid = [[300, 300, 7000],
                     [0.04, 0.04, 4.5],
                     [450, 450, 5000]]
