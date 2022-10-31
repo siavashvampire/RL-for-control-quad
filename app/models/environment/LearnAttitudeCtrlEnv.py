@@ -26,7 +26,7 @@ CONTROLLER_PARAMETERS = {'Motor_limits': [2000, 5000],
                          'Linear_PID': {'P': [300, 300, 7000], 'I': [0.04, 0.04, 4.5], 'D': [450, 450, 5000]},
                          'Linear_To_Angular_Scaler': [1, 1, 0],
                          'Yaw_Rate_Scaler': 1,
-                         'Angular_PID': {'P': [0, 0, 60000], 'I': [0, 0, 1.2], 'D': [12000, 12000, 10000]},
+                         'Angular_PID': {'P': [22000, 22000, 1500], 'I': [0, 0, 1.2], 'D': [12000, 12000, 0]},
                          }
 
 PI = math.pi
@@ -40,7 +40,6 @@ class LearnAttitudeCtrlMain(gym.Env):
     max_integrate_time: int
     count: int
     plot_count: int
-    action_list: list[float] = []
     reward_list: list[int] = []
     obs1_list: list[float] = []
     obs2_list: list[float] = []
@@ -81,9 +80,8 @@ class LearnAttitudeCtrlMain(gym.Env):
 
         self.plot_count = 5
 
-    def step(self, action):
+    def step(self, action: np.ndarray):
         self.do_action(action)
-        # self.action_list.append(action)
         self.time_list.append(self.quad.integrate_time)
         obs, info = self.get_obs()
         reward, done = self.compute_reward()
@@ -105,7 +103,6 @@ class LearnAttitudeCtrlMain(gym.Env):
     def reset(self):
         self.setup_flight()
         self.print_steps()
-        self.action_list = []
         self.reward_list = []
         self.obs1_list = []
         self.obs2_list = []
@@ -140,7 +137,7 @@ class LearnAttitudeCtrlMain(gym.Env):
         self.ctrl.update_target((0, 0, 1))
         self.ctrl.update_yaw_target(0)
 
-    def do_action(self, select_action):
+    def do_action(self, select_action: np.ndarray):
         pass
 
     def get_obs(self):
@@ -148,9 +145,12 @@ class LearnAttitudeCtrlMain(gym.Env):
         _, obs = self.ctrl.get_obs()
         k = self.ctrl.get_ANGULAR_PID()
 
-        k[0, :] = np.divide(k[0, :], 40000)
-        k[1, :] = np.divide(k[1, :], 1)
-        k[2, :] = np.divide(k[2, :], 12000)
+        for i in range(3):
+            for j in range(3):
+                if self.fp[3 * i + j][1] - self.fp[3 * i + j][0] == 0:
+                    k[i][j] = 0
+                else:
+                    k[i][j] = np.divide(k[i][j], self.fp[3 * i + j][1] - self.fp[3 * i + j][0])
 
         # TODO:inja ghalate fekr konam barresi beshe
         k = k.reshape((1, 9))
@@ -275,11 +275,9 @@ class LearnAttitudeCtrlMain(gym.Env):
         axes[2].set_xlabel('time')
         axes[2].set_ylabel('gamma')
 
-
         axes[3].set_title('reward vs time')
         axes[3].set_xlabel('time')
         axes[3].set_ylabel('reward')
-
 
         axes[4].set_title('p vs time')
         axes[4].set_xlabel('time')
@@ -320,7 +318,8 @@ class LearnAttitudeCtrlEnvContinuous(LearnAttitudeCtrlMain):
 
         for i in range(3):
             for j in range(3):
-                select_action[i][j] = select_action[i][j]*(self.fp[3*i+j][1]-self.fp[3*i+j][0]) + self.fp[3*i+j][0]
+                select_action[i][j] = select_action[i][j] * (self.fp[3 * i + j][1] - self.fp[3 * i + j][0]) + \
+                                      self.fp[3 * i + j][0]
 
         select_action = np.array(select_action).transpose()
         self.ctrl.set_ANGULAR_PID(select_action)
@@ -334,12 +333,12 @@ class LearnAttitudeCtrlEnvDiscrete(LearnAttitudeCtrlMain):
                                                       3, 3, 3,
                                                       3, 3, 3])
 
-    def do_action(self, select_action):
+    def do_action(self, select_action: np.ndarray):
         select_action = select_action.reshape((3, 3))
         angular_PID = self.ctrl.get_ANGULAR_PID()
         diff = np.array([[1500, 0.0014 * angular_PID[0][0], 0.012 * angular_PID[0][0]],
-                [1500, 0.0014 * angular_PID[1][0], 0.012 * angular_PID[1][0]],
-                [120, 0.0014 * angular_PID[2][0], 0.012 * angular_PID[2][0]]])
+                         [1500, 0.0014 * angular_PID[1][0], 0.012 * angular_PID[1][0]],
+                         [120, 0.0014 * angular_PID[2][0], 0.012 * angular_PID[2][0]]])
 
         temp_pid = [[0, 0, 0],
                     [0, 0, 0],
@@ -354,12 +353,12 @@ class LearnAttitudeCtrlEnvDiscrete(LearnAttitudeCtrlMain):
                 elif select_action[i][j] == 2:
                     temp_pid[i][j] += 0  # no action
 
-                if temp_pid[i][j] < self.fp[i*3+j][0]:
-                    temp_pid[i][j] = self.fp[i*3+j][0]
-                if temp_pid[i][j] > self.fp[i*3+j][1]:
-                    temp_pid[i][j] = self.fp[i*3+j][1]
-        temp_pid = np.array(temp_pid).transpose()
+                if temp_pid[i][j] < self.fp[i * 3 + j][0]:
+                    temp_pid[i][j] = self.fp[i * 3 + j][0]
+                if temp_pid[i][j] > self.fp[i * 3 + j][1]:
+                    temp_pid[i][j] = self.fp[i * 3 + j][1]
 
+        temp_pid = np.array(temp_pid).transpose()
         self.ctrl.set_ANGULAR_PID(temp_pid)
 
 
@@ -372,7 +371,7 @@ class LearnAttitudeCtrlEnvFragment(LearnAttitudeCtrlMain):
                                                       15, 15, 15,
                                                       15, 15, 15])
 
-    def do_action(self, select_action):
+    def do_action(self, select_action: np.ndarray):
         xp: list = [0, 14]
 
         temp_pid = np.zeros((1, 9))[0]
@@ -382,11 +381,6 @@ class LearnAttitudeCtrlEnvFragment(LearnAttitudeCtrlMain):
 
         temp_pid = temp_pid.reshape((3, 3))
         temp_pid = np.array(temp_pid).transpose()
-
-        # print(temp_pid)
-        # temp_pid = [[22000, 22000, 1500],
-        #             [0, 0, 1.2],
-        #             [12000, 12000, 0]]
 
         self.ctrl.set_ANGULAR_PID(temp_pid)
 
