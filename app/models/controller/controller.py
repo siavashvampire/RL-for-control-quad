@@ -127,7 +127,7 @@ class ControllerPID:
     def stop_thread(self):
         self.run = False
 
-    def get_diff_linear(self):
+    def get_diff_linear(self)->(np.float64,np.float64):
         [dest_x, dest_y, dest_z] = self.target
         [x, y, z, x_dot, y_dot, z_dot, _, _, _, _, _, _] = self.get_state()
         x_error = dest_x - x
@@ -135,7 +135,7 @@ class ControllerPID:
         z_error = dest_z - z
         return np.linalg.norm([x_error, y_error, z_error]), np.linalg.norm([x_dot, y_dot, z_dot])
 
-    def get_diff_angular(self):
+    def get_diff_angular(self)->(np.float64,np.float64):
         [dest_x, dest_y, _] = self.target
         [x, y, _, x_dot, y_dot, _, theta, phi, gamma, theta_dot, phi_dot, gamma_dot] = self.get_state()
 
@@ -191,8 +191,7 @@ class ControllerPID:
         self.target = [0, 0, 0]
         self.yaw_target = 0.0
         self.set_ANGULAR_PID([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
-        # self.set_angular_p_theta(0)
-        # self.set_angular_p_phi(0)
+        self.set_LINEAR_PID([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
 
     def get_obs(self):
         [dest_x, dest_y, dest_z] = self.target
