@@ -48,6 +48,15 @@ class LearnAttitudeCtrlMain(gym.Env):
     obs3_list: list[float] = []
     time_list: list[float] = []
     name: str = "attitude_main"
+    fp: list = [[20000, 70000],
+                [0, 0],
+                [8000, 15000],
+                [20000, 70000],
+                [0, 0],
+                [8000, 15000],
+                [1000, 3000],
+                [1, 2],
+                [0, 1]]
 
     def __init__(self, count: int = 0, random_start: bool = True, max_integrate_time: int = 3):
         self.quad = Quadcopter(QUAD_PARAMETERS)
@@ -132,7 +141,6 @@ class LearnAttitudeCtrlMain(gym.Env):
 
         self.ctrl.update_target((0, 0, 1))
         self.ctrl.update_yaw_target(0)
-
 
     def do_action(self, select_action):
         pass
@@ -311,33 +319,13 @@ class LearnAttitudeCtrlEnvContinuous(LearnAttitudeCtrlMain):
 
     def do_action(self, select_action: np.ndarray):
         select_action = select_action.reshape((3, 3))
-        # select_action[:, 0] *= 40000
-        # select_action[:, 1] *= 1
-        # select_action[:, 2] *= 12000
-
-        con_pid = [[70000, 2, 4000],
-                   [70000, 2, 4000],
-                   [12000, 2, 4000]]
 
         for i in range(3):
             for j in range(3):
-                select_action[i][j] *= con_pid[i][j]
+                select_action[i][j] = select_action[i][j]*(self.fp[3*i+j][1]-self.fp[3*i+j][0]) + self.fp[3*i+j][0]
 
         select_action = np.array(select_action).transpose()
         self.ctrl.set_ANGULAR_PID(select_action)
-
-    def step(self, action: np.ndarray):
-        self.do_action(action)
-        self.action_list.append(action[0])
-        self.time_list.append(self.quad.integrate_time)
-        obs, info = self.get_obs()
-        reward, done = self.compute_reward()
-        self.reward_list.append(reward)
-        # self.obs1_list.append(obs[0])
-        # self.obs2_list.append(obs[1])
-        # self.obs3_list.append(obs[2])
-        time.sleep(0.1)
-        return obs, reward, done, info
 
 
 class LearnAttitudeCtrlEnvDiscrete(LearnAttitudeCtrlMain):
@@ -351,9 +339,10 @@ class LearnAttitudeCtrlEnvDiscrete(LearnAttitudeCtrlMain):
     def do_action(self, select_action):
         select_action = select_action.reshape((3, 3))
         angular_PID = self.ctrl.get_ANGULAR_PID()
-        diff = [[5000, 0.0014 * angular_PID[0][0], 0.012 * angular_PID[0][0]],
-                [5000, 0.0014 * angular_PID[1][0], 0.012 * angular_PID[1][0]],
-                [400, 0.0014 * angular_PID[2][0], 0.012 * angular_PID[2][0]]]
+        diff = np.array([[1500, 0.0014 * angular_PID[0][0], 0.012 * angular_PID[0][0]],
+                [1500, 0.0014 * angular_PID[1][0], 0.012 * angular_PID[1][0]],
+                [120, 0.0014 * angular_PID[2][0], 0.012 * angular_PID[2][0]]])
+
         temp_pid = [[0, 0, 0],
                     [0, 0, 0],
                     [0, 0, 0]]
@@ -367,9 +356,12 @@ class LearnAttitudeCtrlEnvDiscrete(LearnAttitudeCtrlMain):
                 elif select_action[i][j] == 2:
                     temp_pid[i][j] += 0  # no action
 
-                if temp_pid[i][j] < 0:
-                    temp_pid[i][j] = 0
+                if temp_pid[i][j] < self.fp[i*3+j][0]:
+                    temp_pid[i][j] = self.fp[i*3+j][0]
+                if temp_pid[i][j] > self.fp[i*3+j][1]:
+                    temp_pid[i][j] = self.fp[i*3+j][1]
         temp_pid = np.array(temp_pid).transpose()
+
         self.ctrl.set_ANGULAR_PID(temp_pid)
 
 
@@ -378,26 +370,17 @@ class LearnAttitudeCtrlEnvFragment(LearnAttitudeCtrlMain):
         super().__init__(count=count, random_start=random_start, max_integrate_time=max_integrate_time)
         self.name = "attitude_fragment"
 
-        # self.action_space = gym.spaces.MultiDiscrete([15, 15, 15,
-        #                                               15, 15, 15,
-        #                                               15, 15, 15])
+        self.action_space = gym.spaces.MultiDiscrete([15, 15, 15,
+                                                      15, 15, 15,
+                                                      15, 15, 15])
 
     def do_action(self, select_action):
-        xp = [0, 14]
-        fp = [[0, 70000],
-              [0, 1],
-              [0, 12000],
-              [0, 70000],
-              [0, 1],
-              [0, 12000],
-              [0, 5000],
-              [0, 2],
-              [0, 1]]
+        xp: list = [0, 14]
 
         temp_pid = np.zeros((1, 9))[0]
 
         for i in range(9):
-            temp_pid[i] = np.interp(select_action[i], xp, fp[i])
+            temp_pid[i] = np.interp(select_action[i], xp, self.fp[i])
 
         temp_pid = temp_pid.reshape((3, 3))
         temp_pid = np.array(temp_pid).transpose()
