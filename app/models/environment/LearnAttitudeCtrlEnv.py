@@ -41,7 +41,6 @@ class LearnAttitudeCtrlMain(gym.Env):
     count: int
     plot_count: int
     action_list: list[float] = []
-    p_list: list[float] = []
     reward_list: list[int] = []
     obs1_list: list[float] = []
     obs2_list: list[float] = []
@@ -107,7 +106,6 @@ class LearnAttitudeCtrlMain(gym.Env):
         self.setup_flight()
         self.print_steps()
         self.action_list = []
-        self.p_list = []
         self.reward_list = []
         self.obs1_list = []
         self.obs2_list = []
