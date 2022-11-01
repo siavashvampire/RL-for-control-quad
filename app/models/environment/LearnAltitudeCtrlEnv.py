@@ -43,6 +43,8 @@ class LearnAltitudeCtrlMain(gym.Env):
     obs1_list: list[float] = []
     obs2_list: list[float] = []
     obs3_list: list[float] = []
+    err1_list: list[float] = []
+    err2_list: list[float] = []
     time_list: list[float] = []
     name: str = "altitude_main"
     fp: list = [[100, 1000],
@@ -79,7 +81,7 @@ class LearnAltitudeCtrlMain(gym.Env):
         self.random_start = random_start
         self.max_integrate_time = max_integrate_time
 
-        self.plot_count = 5
+        self.plot_count = 6
 
     def step(self, action: np.ndarray):
         self.do_action(action)
@@ -100,6 +102,8 @@ class LearnAltitudeCtrlMain(gym.Env):
         self.obs1_list = []
         self.obs2_list = []
         self.obs3_list = []
+        self.err1_list = []
+        self.err2_list = []
         self.time_list = []
         self.count += 1
         obs, _ = self.get_obs()
@@ -127,10 +131,10 @@ class LearnAltitudeCtrlMain(gym.Env):
         self.quad.set_orientation((0, 0, 0))
         # TODO:ma inja fght bara target sefr shoro kardim baad b fekr target tasadofi bashim
 
-        self.ctrl.update_target((1, 1, 2))
+        self.ctrl.update_target((0.2, 0.2, 1.2))
         self.ctrl.update_yaw_target(0)
 
-    def do_action(self, select_action: np.ndarray):
+    def do_action(self, select_action: np.ndarray) -> None:
         temp_pid = [[22000, 22000, 1500],
                     [0, 0, 1.2],
                     [12000, 12000, 0]]
@@ -161,6 +165,9 @@ class LearnAltitudeCtrlMain(gym.Env):
 
         error = abs(error) / 3
         error_dot = abs(error_dot) / 3
+
+        self.err1_list.append(error)
+        self.err2_list.append(error_dot)
 
         if error > 1:
             reward -= 50
@@ -201,67 +208,90 @@ class LearnAltitudeCtrlMain(gym.Env):
         return reward, done
 
     def is_collision(self) -> bool:
-        if abs(self.quad.state[0]) > 0.75:
+        error = self.ctrl.get_error_linear()
+        error = abs(error)
+
+        if abs(error[0]) > 0.75:
             return True
-        if abs(self.quad.state[1]) > 0.75:
+        if abs(error[1]) > 0.75:
             return True
-        if abs(self.quad.state[2]) > 0.75:
+        if abs(error[2]) > 0.75:
             return True
         return False
 
-    def stop(self):
+    def stop(self) -> None:
         self.quad.reset()
         self.ctrl.reset()
 
-    def print_steps(self):
+    def print_steps(self) -> None:
         figs: list[Figure] = []
         axes: list[Axes] = []
 
+        titles = [
+            'x(m) vs time(s)',
+            'y(m) vs time(s)',
+            'z(m) vs time(s)',
+            'reward vs time(s)',
+            'error(m) vs time(s)',
+            'error dot(m/s) vs time(s)',
+        ]
+
+        x_label = [
+            'time(s)',
+            'time(s)',
+            'time(s)',
+            'time(s)',
+            'time(s)',
+            'time(s)',
+        ]
+
+        y_label = [
+            'x(m)',
+            'y(m)',
+            'z(m)',
+            'reward',
+            'error(m)',
+            'error dot(m/s)',
+        ]
+
         for i in range(self.plot_count):
             figs.append(plt.figure())
-            axes.append(figs[i].add_axes((0.1, 0.1, 0.8, 0.8)))
-
-        axes[0].set_title('x(m) vs time')
-        axes[0].set_xlabel('time')
-        axes[0].set_ylabel('x(m)')
-
-        axes[1].set_title('y(m) vs time')
-        axes[1].set_xlabel('time')
-        axes[1].set_ylabel('y(m)')
-
-        axes[2].set_title('z(m) vs time')
-        axes[2].set_xlabel('time')
-        axes[2].set_ylabel('z(m)')
-
-        axes[3].set_title('reward vs time')
-        axes[3].set_xlabel('time')
-        axes[3].set_ylabel('reward')
-
-        axes[4].set_title('p vs time')
-        axes[4].set_xlabel('time')
-        axes[4].set_ylabel('P')
+            axes.append(figs[i].add_axes((0.15, 0.15, 0.7, 0.7)))
+            axes[i].set_title(titles[i])
+            axes[i].set_xlabel(x_label[i])
+            axes[i].set_ylabel(y_label[i])
 
         axes[0].plot(self.time_list, self.obs1_list, linewidth=1)
         axes[1].plot(self.time_list, self.obs2_list, linewidth=1)
         axes[2].plot(self.time_list, self.obs3_list, linewidth=1)
         axes[3].plot(self.time_list, self.reward_list, linewidth=1)
+        axes[4].plot(self.time_list, self.err1_list, linewidth=1)
+        axes[5].plot(self.time_list, self.err2_list, linewidth=1)
 
         axes[0].scatter(self.time_list, self.obs1_list)
         axes[1].scatter(self.time_list, self.obs2_list)
         axes[2].scatter(self.time_list, self.obs3_list)
         axes[3].scatter(self.time_list, self.reward_list)
+        axes[4].scatter(self.time_list, self.err1_list)
+        axes[5].scatter(self.time_list, self.err2_list)
 
         result_dir = f'learn_result/{self.name}/{self.count}/'
 
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
 
-        figs[0].savefig(result_dir + '1.x vs time.png')
-        figs[1].savefig(result_dir + '2.y vs time.png')
-        figs[2].savefig(result_dir + '3.z vs time.png')
-        figs[3].savefig(result_dir + '4.reward vs time.png')
+        names = [
+            '1.x vs time.png',
+            '2.y vs time.png',
+            '3.z vs time.png',
+            '4.reward vs time.png',
+            '5.error vs time.png',
+            '6.error dot vs time.png',
+        ]
 
         for i in range(self.plot_count):
+            figs[i].savefig(result_dir + names[i])
+            plt.close(figs[i])
             plt.close(figs[i])
 
 
@@ -271,7 +301,7 @@ class LearnAltitudeCtrlEnvContinuous(LearnAltitudeCtrlMain):
         self.name = "altitude_continuous"
         self.action_space = gym.spaces.Box(low=0, high=1, shape=(9,), dtype=np.float32)
 
-    def do_action(self, select_action: np.ndarray):
+    def do_action(self, select_action: np.ndarray) -> None:
         super(LearnAltitudeCtrlEnvContinuous, self).do_action(select_action)
         select_action = select_action.reshape((3, 3))
 
@@ -292,7 +322,7 @@ class LearnAltitudeCtrlEnvDiscrete(LearnAltitudeCtrlMain):
                                                       3, 3, 3,
                                                       3, 3, 3])
 
-    def do_action(self, select_action: np.ndarray):
+    def do_action(self, select_action: np.ndarray) -> None:
         super(LearnAltitudeCtrlEnvDiscrete, self).do_action(select_action)
         select_action = select_action.reshape((3, 3))
         linear_PID = self.ctrl.get_LINEAR_PID()
@@ -330,7 +360,7 @@ class LearnAltitudeCtrlEnvFragment(LearnAltitudeCtrlMain):
                                                       15, 15, 15,
                                                       15, 15, 15])
 
-    def do_action(self, select_action: np.ndarray):
+    def do_action(self, select_action: np.ndarray) -> None:
         super(LearnAltitudeCtrlEnvFragment, self).do_action(select_action)
         xp: list = [0, 14]
 
@@ -350,7 +380,7 @@ class LearnAltitudeCtrlEnvTest(LearnAltitudeCtrlMain):
         super().__init__(count=count, random_start=random_start, max_integrate_time=max_integrate_time)
         self.name = "altitude_test"
 
-    def do_action(self, select_action: np.ndarray):
+    def do_action(self, select_action: np.ndarray) -> None:
         super(LearnAltitudeCtrlEnvTest, self).do_action(select_action)
 
         temp_pid = [[300, 300, 7000],
