@@ -66,7 +66,7 @@ class ControllerPID:
         dest_x_dot = self.LINEAR_P[0] * x_error + self.LINEAR_D[0] * (-x_dot) + self.xi_term
         dest_y_dot = self.LINEAR_P[1] * y_error + self.LINEAR_D[1] * (-y_dot) + self.yi_term
         dest_z_dot = self.LINEAR_P[2] * z_error + self.LINEAR_D[2] * (-z_dot) + self.zi_term
-
+        # print("dest_z_dot =", dest_z_dot)
         throttle = np.clip(dest_z_dot, self.Z_LIMITS[0], self.Z_LIMITS[1])
 
         dest_theta = self.LINEAR_TO_ANGULAR_SCALER[0] * (dest_x_dot * math.sin(gamma) - dest_y_dot * math.cos(gamma))
@@ -97,6 +97,7 @@ class ControllerPID:
         m2 = throttle + y_val - z_val
         m3 = throttle - x_val + z_val
         m4 = throttle - y_val - z_val
+
         M = np.clip([m1, m2, m3, m4], self.MOTOR_LIMITS[0], self.MOTOR_LIMITS[1])
         self.actuate_motors(M)
 
@@ -127,15 +128,28 @@ class ControllerPID:
     def stop_thread(self):
         self.run = False
 
-    def get_diff_linear(self)->(np.float64,np.float64):
+    def get_diff_linear(self) -> (np.float64, np.float64):
         [dest_x, dest_y, dest_z] = self.target
         [x, y, z, x_dot, y_dot, z_dot, _, _, _, _, _, _] = self.get_state()
         x_error = dest_x - x
         y_error = dest_y - y
         z_error = dest_z - z
+        # print("x_error = ", x_error)
+        # print("y_error = ", y_error)
+        # print("z_error = ", z_error)
+        # print("norm_error = ", np.linalg.norm([x_error, y_error, z_error]))
         return np.linalg.norm([x_error, y_error, z_error]), np.linalg.norm([x_dot, y_dot, z_dot])
 
-    def get_diff_angular(self)->(np.float64,np.float64):
+    def get_error_linear(self) -> np.ndarray:
+        [dest_x, dest_y, dest_z] = self.target
+        [x, y, z, _, _, _, _, _, _, _, _, _] = self.get_state()
+        x_error = dest_x - x
+        y_error = dest_y - y
+        z_error = dest_z - z
+
+        return np.array([x_error, y_error, z_error])
+
+    def get_diff_angular(self) -> (np.float64, np.float64):
         [dest_x, dest_y, _] = self.target
         [x, y, _, x_dot, y_dot, _, theta, phi, gamma, theta_dot, phi_dot, gamma_dot] = self.get_state()
 
@@ -214,10 +228,6 @@ class ControllerPID:
         phi_error = dest_phi - phi
 
         gamma_dot_error = (self.YAW_RATE_SCALER * self.wrap_angle(dest_gamma - gamma)) - gamma_dot
-
-        # print("dest_theta = ",dest_theta)
-        # print("theta = ",theta)
-        # print("theta_error = ",theta_error)
 
         return [[x_error, x_dot, self.I_x],
                 [y_error, y_dot, self.I_y],
