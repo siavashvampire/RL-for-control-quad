@@ -173,7 +173,9 @@ class Quadcopter:
         if self.thread_object is not None:
             self.thread_object.join()
         self.state[0:3] = self.init['position']
+        self.state[3:6] = [0, 0, 0]
         self.state[6:9] = self.init['orientation']
+        self.state[9:12] = [0, 0, 0]
         self.set_motor_speeds([0, 0, 0, 0])
         self.ode = scipy.integrate.ode(self.state_dot).set_integrator('vode', nsteps=500, method='bdf')
         self.integrate_time = 0
