@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from stable_baselines3 import PPO,A2C
+from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 from tqdm import tqdm
@@ -18,7 +18,7 @@ from app.iteration_handler.iteration_handler import IterationHandler
 
 class PlayAttitude:
     num_fig: int
-    model: Union[PPO,A2C]
+    model: Union[PPO, A2C]
     times: int
     axes: list[Axes]
     figs: list[Figure]
@@ -56,35 +56,41 @@ class PlayAttitude:
             self.figs.append(plt.figure())
             self.axes.append(self.figs[i].add_axes((0.1, 0.1, 0.8, 0.8)))
 
-        titles = ['theta vs time',
-                  'phi vs time',
-                  'gamma vs time',
-                  'theta dot vs time',
-                  'phi dot vs time',
-                  'gamma dot vs time',
-                  'reward vs time',
-                  'trust vs time',
-                  'P vs time']
+        titles = [
+            'theta vs time(s)',
+            'phi vs time(s)',
+            'gamma vs time(s)',
+            'theta dot vs time(s)',
+            'phi dot vs time(s)',
+            'gamma dot vs time(s)',
+            'reward vs time(s)',
+            'trust vs time(s)',
+            'P vs time(s)',
+        ]
 
-        xlabel = ['time',
-                  'time',
-                  'time',
-                  'time',
-                  'time',
-                  'time',
-                  'time',
-                  'time',
-                  'time']
+        xlabel = [
+            'time(s)',
+            'time(s)',
+            'time(s)',
+            'time(s)',
+            'time(s)',
+            'time(s)',
+            'time(s)',
+            'time(s)',
+            'time(s)',
+        ]
 
-        ylabel = ['theta',
-                  'phi',
-                  'gamma',
-                  'theta dot',
-                  'phi dot',
-                  'gamma dot',
-                  'reward',
-                  'trust',
-                  'P']
+        ylabel = [
+            'theta',
+            'phi',
+            'gamma',
+            'theta dot',
+            'phi dot',
+            'gamma dot',
+            'reward',
+            'trust',
+            'P',
+        ]
 
         for i in range(self.num_fig):
             self.axes[i].set_title(titles[i])
@@ -109,8 +115,6 @@ class PlayAttitude:
             self.model = A2C.load(env=self.env, path=self.models_dir + self.file_name)
         else:
             self.model = PPO.load(env=self.env, path=self.models_dir + self.file_name)
-
-
 
         for i in tqdm(range(self.times), colour='green'):
             obs = self.env.reset()
