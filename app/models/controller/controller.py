@@ -134,10 +134,6 @@ class ControllerPID:
         x_error = dest_x - x
         y_error = dest_y - y
         z_error = dest_z - z
-        # print("x_error = ", x_error)
-        # print("y_error = ", y_error)
-        # print("z_error = ", z_error)
-        # print("norm_error = ", np.linalg.norm([x_error, y_error, z_error]))
         return np.linalg.norm([x_error, y_error, z_error]), np.linalg.norm([x_dot, y_dot, z_dot])
 
     def get_error_linear(self) -> np.ndarray:

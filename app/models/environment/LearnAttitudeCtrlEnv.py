@@ -17,7 +17,7 @@ QUAD_DYNAMICS_UPDATE = 0.002  # seconds
 CONTROLLER_DYNAMICS_UPDATE = 0.005  # seconds
 
 QUAD_PARAMETERS = {'Motor_limits': [2000, 5000], 'position': [0, 0, 1], 'orientation': [0, 0, 0], 'L': 0.3, 'r': 0.1,
-                   'prop_size': [6, 4.5], 'weight': 1.2}
+                   'prop_size': [6, 4.5], 'weight': 0.12}
 
 CONTROLLER_PARAMETERS = {'Motor_limits': [2000, 5000],
                          'Tilt_limits': [-10, 10],

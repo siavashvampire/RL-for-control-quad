@@ -88,13 +88,14 @@ class Quadcopter:
         state_dot[1] = self.state[4]
         state_dot[2] = self.state[5]
         # The acceleration
-        x_dotdot = np.array([0, 0, -self.weight * self.g]) + np.dot(
+        x_dotdot = np.array([0, 0, -1 * self.g]) + np.dot(
             self.rotation_matrix(self.state[6:9]), np.array([0, 0, (
                     self.m1.thrust + self.m2.thrust + self.m3.thrust +
                     self.m4.thrust)])) / self.weight
         state_dot[3] = x_dotdot[0]
         state_dot[4] = x_dotdot[1]
         state_dot[5] = x_dotdot[2]
+
         # The angular rates(t+1 theta_dots equal the t theta_dots)
         state_dot[6] = self.state[9]
         state_dot[7] = self.state[10]
