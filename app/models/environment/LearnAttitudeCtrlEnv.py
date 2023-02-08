@@ -127,7 +127,7 @@ class LearnAttitudeCtrlMain(gym.Env):
         # Get a random section
         if self.random_start:
             self.quad.set_orientation(
-                (((-1, -1, -1) ** np.random.randint(0, 2, 3)) * (0.1 - np.random.random(3) * 0.05)).squeeze())
+                (((-1, -1, -1) ** np.random.randint(0, 2, 3)) * (0.3 - np.random.random(3) * 0.05)).squeeze())
         else:
             self.quad.set_orientation((0.5, 0.5, 0))
 

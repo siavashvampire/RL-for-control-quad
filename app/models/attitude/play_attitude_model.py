@@ -52,23 +52,19 @@ class PlayAttitude:
         np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
     def init_fig(self) -> None:
-        for i in range(self.num_fig):
-            self.figs.append(plt.figure())
-            self.axes.append(self.figs[i].add_axes((0.1, 0.1, 0.8, 0.8)))
-
         titles = [
-            'theta vs time(s)',
-            'phi vs time(s)',
-            'gamma vs time(s)',
-            'theta dot vs time(s)',
-            'phi dot vs time(s)',
-            'gamma dot vs time(s)',
+            'theta($^\circ$) vs time(s)',
+            'phi($^\circ$) vs time(s)',
+            'gamma($^\circ$) vs time(s)',
+            'theta dot($^\circ$/s) vs time(s)',
+            'phi dot($^\circ$/s) vs time(s)',
+            'gamma dot($^\circ$/s) vs time(s)',
             'reward vs time(s)',
-            'trust vs time(s)',
+            'trust(N) vs time(s)',
             'P vs time(s)',
         ]
 
-        xlabel = [
+        x_label = [
             'time(s)',
             'time(s)',
             'time(s)',
@@ -80,22 +76,24 @@ class PlayAttitude:
             'time(s)',
         ]
 
-        ylabel = [
-            'theta',
-            'phi',
-            'gamma',
-            'theta dot',
-            'phi dot',
-            'gamma dot',
+        y_label = [
+            'theta($^\circ$)',
+            'phi($^\circ$)',
+            'gamma($^\circ$)',
+            'theta dot($^\circ$/s)',
+            'phi dot($^\circ$/s)',
+            'gamma dot($^\circ$/s)',
             'reward',
-            'trust',
+            'trust(N)',
             'P',
         ]
 
         for i in range(self.num_fig):
+            self.figs.append(plt.figure())
+            self.axes.append(self.figs[i].add_axes((0.1, 0.1, 0.8, 0.8)))
             self.axes[i].set_title(titles[i])
-            self.axes[i].set_xlabel(xlabel[i])
-            self.axes[i].set_ylabel(ylabel[i])
+            self.axes[i].set_xlabel(x_label[i])
+            self.axes[i].set_ylabel(y_label[i])
 
     def play(self) -> None:
         if not os.path.exists(self.models_dir):
@@ -168,15 +166,15 @@ class PlayAttitude:
             self.axes[0].plot(time_temp, np.array(theta_temp) * 180 / math.pi, linewidth=1)
             self.axes[1].plot(time_temp, np.array(phi_temp) * 180 / math.pi, linewidth=1)
             self.axes[2].plot(time_temp, np.array(gamma_temp) * 180 / math.pi, linewidth=1)
-            self.axes[3].plot(time_temp, theta_dot_temp, linewidth=1)
-            self.axes[4].plot(time_temp, phi_dot_temp, linewidth=1)
-            self.axes[5].plot(time_temp, gamma_dot_temp, linewidth=1)
+            self.axes[3].plot(time_temp, np.array(theta_dot_temp)* 180 / math.pi, linewidth=1)
+            self.axes[4].plot(time_temp, np.array(phi_dot_temp)* 180 / math.pi, linewidth=1)
+            self.axes[5].plot(time_temp, np.array(gamma_dot_temp)* 180 / math.pi, linewidth=1)
             trust_temp = np.array(trust_temp)
             self.axes[7].plot(time_temp, trust_temp[:, 0], linewidth=1)
             self.axes[7].plot(time_temp, trust_temp[:, 1], linewidth=1)
             self.axes[7].plot(time_temp, trust_temp[:, 2], linewidth=1)
             self.axes[7].plot(time_temp, trust_temp[:, 3], linewidth=1)
-            self.axes[8].plot(time_temp, kp_temp, linewidth=1)
+            # self.axes[8].plot(time_temp, kp_temp, linewidth=1)
             time_temp.append(time_temp[-1] + 0.02)
             self.axes[6].plot(time_temp, reward_temp, linewidth=1)
 
