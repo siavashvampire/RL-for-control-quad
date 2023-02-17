@@ -175,15 +175,15 @@ class LearnAltitudeCtrlMain(gym.Env):
 
         if error > 1 * 10:
             reward -= 50
-        elif error > 0.75* 10:
+        elif error > 0.75 * 10:
             reward -= 30
-        elif error > 0.5*10:
+        elif error > 0.5 * 10:
             reward -= 20
-        elif error > 0.3*10:
+        elif error > 0.3 * 10:
             reward -= 10
-        elif error > 0.2*10:
+        elif error > 0.2 * 10:
             reward -= 7
-        elif error > 0.1*10:
+        elif error > 0.1 * 10:
             reward -= 1
         else:
             reward += 20
@@ -191,13 +191,13 @@ class LearnAltitudeCtrlMain(gym.Env):
                 self.settling_flag = True
                 self.settling_time = self.quad.integrate_time
 
-        if error_dot > 1*10:
+        if error_dot > 1 * 10:
             reward -= 50
-        elif error_dot > 0.5*10:
+        elif error_dot > 0.5 * 10:
             reward -= 30
-        elif error_dot > 0.3*10:
+        elif error_dot > 0.3 * 10:
             reward -= 10
-        elif error_dot > 0.1*10:
+        elif error_dot > 0.1 * 10:
             reward -= 5
         else:
             reward += 0

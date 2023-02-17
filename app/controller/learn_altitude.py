@@ -20,7 +20,7 @@ def learn_altitude(app_name: str, max_iter: int):
     elif app_name == "altitude_test":
         env_name = "scripts:learn_altitude_ctrl_test_env-v0"
         policy = "MlpPolicy"
-        max_integrate_time = 15
+        max_integrate_time = 3
         random_start = False
     else:
         env_name = ""
