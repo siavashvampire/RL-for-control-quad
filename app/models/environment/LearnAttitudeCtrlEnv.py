@@ -344,6 +344,8 @@ class LearnAttitudeCtrlEnvDiscrete(LearnAttitudeCtrlMain):
                     [0, 0, 0],
                     [0, 0, 0]]
 
+        # TODO:chera az sefr shoro mishe hei temp_pid nabayad az hamonja shoro she??
+
         for i in range(3):
             for j in range(3):
                 if select_action[i][j] == 0:

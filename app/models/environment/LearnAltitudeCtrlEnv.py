@@ -87,6 +87,7 @@ class LearnAltitudeCtrlMain(gym.Env):
         self.do_action(action)
         self.time_list.append(self.quad.integrate_time)
         obs, info = self.get_obs()
+        # print(obs)
         reward, done = self.compute_reward()
         self.reward_list.append(reward)
         self.obs1_list.append(obs[0])
@@ -131,12 +132,15 @@ class LearnAltitudeCtrlMain(gym.Env):
         self.quad.set_orientation((0, 0, 0))
         # TODO:ma inja fght bara target sefr shoro kardim baad b fekr target tasadofi bashim
 
-        self.ctrl.update_target((0.2, 0.2, 1.2))
+        self.ctrl.update_target((3, 3, 1.2))
         self.ctrl.update_yaw_target(0)
 
     def do_action(self, select_action: np.ndarray) -> None:
-        temp_pid = [[22000, 22000, 1500],
-                    [0, 0, 1.2],
+        # temp_pid = [[22000, 22000, 1500],
+        #             [0, 0, 1.2],
+        #             [12000, 12000, 0]]
+        temp_pid = [[60000, 60000, 1500],
+                    [0.1, 0.1, 1.2],
                     [12000, 12000, 0]]
 
         self.ctrl.set_ANGULAR_PID(temp_pid)
@@ -169,17 +173,17 @@ class LearnAltitudeCtrlMain(gym.Env):
         self.err1_list.append(error)
         self.err2_list.append(error_dot)
 
-        if error > 1:
+        if error > 1 * 10:
             reward -= 50
-        elif error > 0.75:
+        elif error > 0.75* 10:
             reward -= 30
-        elif error > 0.5:
+        elif error > 0.5*10:
             reward -= 20
-        elif error > 0.3:
+        elif error > 0.3*10:
             reward -= 10
-        elif error > 0.2:
+        elif error > 0.2*10:
             reward -= 7
-        elif error > 0.1:
+        elif error > 0.1*10:
             reward -= 1
         else:
             reward += 20
@@ -187,13 +191,13 @@ class LearnAltitudeCtrlMain(gym.Env):
                 self.settling_flag = True
                 self.settling_time = self.quad.integrate_time
 
-        if error_dot > 1:
+        if error_dot > 1*10:
             reward -= 50
-        elif error_dot > 0.5:
+        elif error_dot > 0.5*10:
             reward -= 30
-        elif error_dot > 0.3:
+        elif error_dot > 0.3*10:
             reward -= 10
-        elif error_dot > 0.1:
+        elif error_dot > 0.1*10:
             reward -= 5
         else:
             reward += 0
@@ -211,11 +215,11 @@ class LearnAltitudeCtrlMain(gym.Env):
         error = self.ctrl.get_error_linear()
         error = abs(error)
         # print(error)
-        if abs(error[0]) > 0.75:
+        if abs(error[0]) > 0.75 * 10:
             return True
-        if abs(error[1]) > 0.75:
+        if abs(error[1]) > 0.75 * 10:
             return True
-        if abs(error[2]) > 2:
+        if abs(error[2]) > 2 * 10:
             return True
         return False
 
@@ -382,9 +386,9 @@ class LearnAltitudeCtrlEnvTest(LearnAltitudeCtrlMain):
 
     def do_action(self, select_action: np.ndarray) -> None:
         super(LearnAltitudeCtrlEnvTest, self).do_action(select_action)
-
-        temp_pid = [[1000, 1000, 7000],
-                    [1, 1, 4.5],
-                    [1500, 1500, 5000]]
+        # 'Linear_PID': {'P': [300, 300, 7000], 'I': [0.04, 0.04, 4.5], 'D': [450, 450, 5000]},
+        temp_pid = [[300, 300, 7000],
+                    [0.04, 0.04, 4.5],
+                    [450, 450, 5000]]
 
         self.ctrl.set_LINEAR_PID(temp_pid)
