@@ -2,22 +2,22 @@ from app.models.altitude.learn_altitude_model import LearningAltitude
 
 
 def learn_altitude(app_name: str, max_iter: int):
-    if app_name == "altitude_discrete":
+    if "altitude_discrete" in app_name:
         env_name = "scripts:learn_altitude_ctrl_discrete_env-v0"
         policy = "MlpPolicy"
         max_integrate_time = 6
         random_start = False
-    elif app_name == "altitude_continuous":
+    elif "altitude_continuous" in app_name:
         env_name = "scripts:learn_altitude_ctrl_continuous_env-v0"
         policy = "MlpPolicy"
         max_integrate_time = 6
         random_start = False
-    elif app_name == "altitude_fragment":
+    elif "altitude_fragment" in app_name:
         env_name = "scripts:learn_altitude_ctrl_fragment_env-v0"
         policy = "MlpPolicy"
         max_integrate_time = 6
         random_start = False
-    elif app_name == "altitude_test":
+    elif "altitude_test" in app_name:
         env_name = "scripts:learn_altitude_ctrl_test_env-v0"
         policy = "MlpPolicy"
         max_integrate_time = 6
